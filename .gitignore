@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# OS files
+.DS_Store
+
+# Vercel
+.vercel/
+
+# Archives
+*.zip

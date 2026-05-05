@@ -9,6 +9,7 @@ import { Search, Eye, Filter, Download } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Modal from '@/components/admin/Modal';
+import { formatINR } from '@/lib/currency';
 
 export default function AdminOrders() {
   const [search, setSearch] = useState('');
@@ -46,7 +47,7 @@ export default function AdminOrders() {
       order.status || '',
       order.isPaid ? 'Yes' : 'No',
       order.isDelivered ? 'Yes' : 'No',
-      order.totalPrice?.toFixed(2) || '0.00',
+      formatINR(order.totalPrice) || '₹0.00',
     ]);
     const csv = [headers, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
@@ -89,7 +90,7 @@ export default function AdminOrders() {
     {
       header: 'Total',
       accessor: (item: any) => (
-        <p className="text-xs font-bold text-primary">${item.totalPrice.toFixed(2)}</p>
+        <p className="text-xs font-bold text-primary">{formatINR(item.totalPrice)}</p>
       ),
     },
     {
@@ -194,7 +195,7 @@ export default function AdminOrders() {
                       <p className="text-[10px] font-bold uppercase text-white">{item.name}</p>
                       <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Qty: {item.qty} | Size: {item.size || 'N/A'}</p>
                     </div>
-                    <p className="text-sm font-bold text-primary">${(item.price * item.qty).toFixed(2)}</p>
+                    <p className="text-sm font-bold text-primary">{formatINR(item.price * item.qty)}</p>
                   </div>
                 ))}
               </div>
@@ -221,7 +222,7 @@ export default function AdminOrders() {
               </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1">Total Amount</p>
-                <p className="text-3xl font-bold text-primary">${selectedOrder.totalPrice.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-primary">{formatINR(selectedOrder.totalPrice)}</p>
               </div>
             </div>
           </div>

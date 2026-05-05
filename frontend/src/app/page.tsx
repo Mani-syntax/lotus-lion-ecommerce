@@ -5,20 +5,9 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Crown, Flower2, Headphones, RefreshCcw, ShieldCheck, Truck } from 'lucide-react';
 import api from '@/lib/api';
 import { formatINR } from '@/lib/currency';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const lotusProducts = [
-  { name: 'Lotus Atelier Wrap Set', price: 'Rs. 1,890.00', regular: 'Rs. 2,700.00', save: 'Save 30%' },
-  { name: 'Petal Line Studio Dress', price: 'Rs. 2,240.00', regular: 'Rs. 3,200.00', save: 'Save 30%' },
-  { name: 'Ink Bloom Artist Co-ord', price: 'Rs. 2,590.00', regular: 'Rs. 3,700.00', save: 'Save 30%' },
-  { name: 'Canvas Cotton Day Set', price: 'Rs. 1,690.00', regular: 'Rs. 2,400.00', save: 'Save 30%' },
-];
-
-const lionProducts = [
-  { name: 'Lion Studio Overshirt', price: 'Rs. 2,190.00', regular: 'Rs. 3,400.00', save: 'Save 36%' },
-  { name: 'Gallery Linen Trouser', price: 'Rs. 1,840.00', regular: 'Rs. 2,900.00', save: 'Save 37%' },
-  { name: 'Charcoal Frame Jacket', price: 'Rs. 3,250.00', regular: 'Rs. 5,200.00', save: 'Save 38%' },
-  { name: 'Brushline Utility Shirt', price: 'Rs. 1,990.00', regular: 'Rs. 3,100.00', save: 'Save 35%' },
-];
+// Dynamic fetching handled in useEffect
 
 const fallbackCollections = [
   {
@@ -58,6 +47,7 @@ type HomeRailProduct = {
   regular: string;
   save: string;
   image?: string;
+  images?: string[];
   href?: string;
 };
 
@@ -79,10 +69,60 @@ function ArtPanel({ index = 0, label }: { index?: number; label: string }) {
 }
 
 function ProductTile({ product, index }: { product: HomeRailProduct; index: number }) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const images = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+
   return (
     <Link href={product.href || '/products'} className="group block">
-      <div className="relative overflow-hidden">
-        {product.image ? <img src={product.image} alt={product.name} className="aspect-[3/4] w-full object-cover" /> : <ArtPanel index={index} label={product.name} />}
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7] group/tile">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentIdx}
+            src={images[currentIdx]}
+            alt={product.name}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="h-full w-full object-cover"
+          />
+        </AnimatePresence>
+
+        {images.length > 1 && (
+          <>
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover/tile:opacity-100 transition-opacity z-30">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                }}
+                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                }}
+                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            <div className="absolute bottom-12 inset-x-0 flex justify-center gap-1 opacity-0 group-hover/tile:opacity-100 transition-opacity z-30">
+              {images.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-1 h-1 rounded-full transition-all ${
+                    currentIdx === idx ? 'bg-primary w-2' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         <span className="absolute left-3 top-3 z-20 bg-[#df0029] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
           {product.save}
         </span>
@@ -102,20 +142,23 @@ function ProductTile({ product, index }: { product: HomeRailProduct; index: numb
 export default function Home() {
   const [homeContent, setHomeContent] = useState<any>(null);
   const [siteCms, setSiteCms] = useState<any>(null);
+  const [dynamicLotus, setDynamicLotus] = useState<any[]>([]);
+  const [dynamicLion, setDynamicLion] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchHome = async () => {
       try {
-        const { data } = await api.get('/cms/site');
-        setSiteCms(data);
-        setHomeContent(data.home);
-      } catch {
-        try {
-          const { data } = await api.get('/admin/content/home');
-          setHomeContent(data.data);
-        } catch {
-          setHomeContent(null);
-        }
+        const [{ data: cmsData }, { data: lotusData }, { data: lionData }] = await Promise.all([
+          api.get('/cms/site'),
+          api.get('/products?collection=lotus'),
+          api.get('/products?collection=lion')
+        ]);
+        setSiteCms(cmsData);
+        setHomeContent(cmsData.home);
+        setDynamicLotus(lotusData);
+        setDynamicLion(lionData);
+      } catch (err) {
+        console.error('Error fetching dynamic content', err);
       }
     };
     fetchHome();
@@ -129,22 +172,25 @@ export default function Home() {
     regular: product.discountPrice ? formatINR(product.price || 0) : '',
     save: product.discountPrice ? 'Featured' : 'New',
     image: product.image,
+    images: product.images,
     href: `/products/${product._id}`,
   })) : null;
-  const lotusRail = siteCms?.lotusProducts?.length ? siteCms.lotusProducts.map((product: any) => ({
+  const lotusRail = dynamicLotus.length ? dynamicLotus.map((product: any) => ({
     name: product.name,
     price: formatINR(product.discountPrice || product.price || 0),
     regular: product.discountPrice ? formatINR(product.price || 0) : '',
     save: product.discountPrice ? 'Sale' : product.isNewArrival ? 'New' : 'Featured',
     image: product.image,
+    images: product.images,
     href: `/products/${product._id}`,
   })) : null;
-  const lionRail = siteCms?.lionProducts?.length ? siteCms.lionProducts.map((product: any) => ({
+  const lionRail = dynamicLion.length ? dynamicLion.map((product: any) => ({
     name: product.name,
     price: formatINR(product.discountPrice || product.price || 0),
     regular: product.discountPrice ? formatINR(product.price || 0) : '',
     save: product.discountPrice ? 'Sale' : product.isNewArrival ? 'New' : 'Featured',
     image: product.image,
+    images: product.images,
     href: `/products/${product._id}`,
   })) : null;
   const cmsBlogs = siteCms?.blogs?.length ? siteCms.blogs : null;
@@ -168,7 +214,7 @@ export default function Home() {
         <div className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center text-white">
           <div className="max-w-4xl">
             <p className="mb-5 text-[13px] uppercase tracking-[0.32em]">{slide?.eyebrow || 'Online Exclusive Sale'}</p>
-            <h1 className="text-5xl font-light uppercase tracking-[0.24em] md:text-7xl">{slide?.title || 'Lotus & Lion'}</h1>
+            <h1 className="text-3xl font-light uppercase tracking-[0.24em] md:text-7xl">{slide?.title || 'Lotus & Lion'}</h1>
             <p className="mx-auto mt-6 max-w-2xl text-sm leading-7">
               {slide?.subtitle || 'Lotus Collections for women. Lion Collections for men. Original artist-led outfits for everyday and occasion wear.'}
             </p>
@@ -191,7 +237,7 @@ export default function Home() {
           <button aria-label="Next" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></button>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {(lotusRail || featuredProducts || lotusProducts).slice(0, 4).map((product: any, index: number) => <ProductTile key={product.name} product={product} index={index} />)}
+          {(lotusRail || []).slice(0, 4).map((product: any, index: number) => <ProductTile key={product.name} product={product} index={index} />)}
         </div>
       </section>
 
@@ -232,7 +278,7 @@ export default function Home() {
           <button aria-label="Next" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></button>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {(lionRail || lionProducts).slice(0, 4).map((product: any, index: number) => <ProductTile key={product.name} product={product} index={index + 1} />)}
+          {(lionRail || []).slice(0, 4).map((product: any, index: number) => <ProductTile key={product.name} product={product} index={index + 1} />)}
         </div>
       </section>
 

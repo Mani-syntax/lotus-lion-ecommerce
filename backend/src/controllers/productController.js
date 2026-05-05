@@ -1,14 +1,33 @@
 const Product = require('../models/Product');
+const { remember } = require('../services/cacheService');
 
 // @desc    Fetch all products
 // @route   GET /api/products
 // @access  Public
 const getProducts = async (req, res, next) => {
   try {
-    const query = { isPublished: true, isVisible: true };
-    if (req.query.category) query.category = req.query.category;
-    if (req.query.collectionType) query.collectionType = req.query.collectionType;
-    const products = await Product.find(query);
+    const { collection, category } = req.query;
+    
+    // Cache key based on query params
+    const cacheKey = `products:public:${collection || 'all'}:${category || 'all'}`;
+
+    const products = await remember(cacheKey, async () => {
+      const now = new Date();
+      const query = { 
+        isVisible: true,
+        $or: [
+          { releaseDate: { $lte: now } },
+          { releaseDate: { $exists: false } },
+          { releaseDate: null }
+        ]
+      };
+
+      if (category) query.category = category;
+      if (collection) query.collectionName = collection;
+
+      return await Product.find(query).sort('-createdAt');
+    });
+
     res.json(products);
   } catch (error) {
     next(error);

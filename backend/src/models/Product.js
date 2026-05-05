@@ -31,6 +31,12 @@ const productSchema = mongoose.Schema(
       type: String,
       default: '',
     },
+    collectionName: {
+      type: String,
+      enum: ['lotus', 'lion'],
+      default: 'lotus',
+      index: true,
+    },
     collectionType: {
       type: String,
       enum: ['lotus', 'lion', 'artist'],
@@ -48,6 +54,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
       default: 0,
+    },
+    currency: {
+      type: String,
+      default: 'INR',
     },
     discountPrice: {
       type: Number,
@@ -145,6 +155,13 @@ productSchema.virtual('effectivePrice').get(function () {
 productSchema.virtual('isLowStock').get(function () {
   return this.countInStock > 0 && this.countInStock < 10;
 });
+
+productSchema.virtual('collection').get(function() {
+  return this.collectionName;
+});
+
+productSchema.set('toJSON', { virtuals: true });
+productSchema.set('toObject', { virtuals: true });
 
 const Product = mongoose.model('Product', productSchema);
 

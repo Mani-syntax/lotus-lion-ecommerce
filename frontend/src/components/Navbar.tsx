@@ -74,10 +74,10 @@ const Navbar = () => {
             ))}
           </nav>
 
-          <Link href="/" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-3 text-center">
-            <span className="lotus-symbol" aria-hidden="true"><Flower2 /></span>
-            <span className="brand-heading block text-2xl uppercase">Lotus & Lion</span>
-            <span className="lion-symbol" aria-hidden="true"><Crown /></span>
+          <Link href="/" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 sm:gap-3 text-center">
+            <span className="lotus-symbol hidden sm:inline-grid" aria-hidden="true"><Flower2 /></span>
+            <span className="brand-heading block text-lg sm:text-2xl uppercase whitespace-nowrap">Lotus & Lion</span>
+            <span className="lion-symbol hidden sm:inline-grid" aria-hidden="true"><Crown /></span>
           </Link>
 
           <div className="flex items-center gap-5">

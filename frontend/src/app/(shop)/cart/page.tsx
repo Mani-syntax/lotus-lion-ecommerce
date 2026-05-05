@@ -3,6 +3,7 @@
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
 import { ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
+import { formatINR } from '@/lib/currency';
 
 export default function CartPage() {
   const { cartItems, removeFromCart, addToCart } = useStore();
@@ -44,7 +45,7 @@ export default function CartPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-xs text-primary font-medium tracking-widest">${item.price.toFixed(2)}</p>
+                      <p className="text-xs text-primary font-medium tracking-widest">{formatINR(item.price)}</p>
                     </div>
 
                     <div className="flex justify-between items-end">
@@ -64,7 +65,7 @@ export default function CartPage() {
                         </button>
                       </div>
                       <p className="text-sm font-bold tracking-widest uppercase">
-                        ${(item.qty * item.price).toFixed(2)}
+                        {formatINR(item.qty * item.price)}
                       </p>
                     </div>
                   </div>
@@ -77,7 +78,7 @@ export default function CartPage() {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-xs tracking-widest uppercase">
                   <span className="text-gray-500">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{formatINR(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-xs tracking-widest uppercase">
                   <span className="text-gray-500">Shipping</span>
@@ -85,7 +86,7 @@ export default function CartPage() {
                 </div>
                 <div className="pt-4 border-t border-border flex justify-between font-bold text-sm tracking-widest uppercase">
                   <span>Total</span>
-                  <span className="text-primary">${subtotal.toFixed(2)}</span>
+                  <span className="text-primary">{formatINR(subtotal)}</span>
                 </div>
               </div>
               <Link

@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { CreditCard, Truck, ShieldCheck, ArrowRight } from 'lucide-react';
+import { formatINR } from '@/lib/currency';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function CheckoutPage() {
                     <div className="flex-grow">
                       <h4 className="text-[10px] font-bold uppercase tracking-wide truncate w-32">{item.name}</h4>
                       <p className="text-[10px] text-gray-500 uppercase">Qty: {item.qty}</p>
-                      <p className="text-[10px] font-bold text-primary">${(item.qty * item.price).toFixed(2)}</p>
+                      <p className="text-[10px] font-bold text-primary">{formatINR(item.qty * item.price)}</p>
                     </div>
                   </div>
                 ))}
@@ -158,7 +159,7 @@ export default function CheckoutPage() {
               <div className="pt-8 border-t border-border space-y-4">
                 <div className="flex justify-between text-xs tracking-widest uppercase font-bold">
                   <span>Total</span>
-                  <span className="text-primary text-lg">${subtotal.toFixed(2)}</span>
+                  <span className="text-primary text-lg">{formatINR(subtotal)}</span>
                 </div>
               </div>
             </div>

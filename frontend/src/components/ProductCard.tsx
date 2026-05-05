@@ -6,6 +6,9 @@ import { ShoppingBag } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 import { formatINR } from '@/lib/currency';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Product {
   _id: string;
@@ -17,12 +20,17 @@ interface Product {
   category: string;
   collectionType?: 'lotus' | 'lion' | 'artist';
   countInStock: number;
+  images?: string[];
 }
 
 const ProductCard = ({ product }: { product: Product }) => {
   const addToCart = useStore((state) => state.addToCart);
-  const regularPrice = product.discountPrice && product.discountPrice > product.price ? product.discountPrice : null;
-  const savings = regularPrice ? Math.round(((regularPrice - product.price) / regularPrice) * 100) : 30;
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
+  const images = product.images && product.images.length > 0 ? product.images : [product.image];
+
+  const currentPrice = product.discountPrice ? product.discountPrice : product.price;
+  const regularPrice = product.discountPrice ? product.price : null;
+  const savings = regularPrice ? Math.round(((regularPrice - currentPrice) / regularPrice) * 100) : 0;
 
   const handleAddToCart = (e: MouseEvent) => {
     e.preventDefault();
@@ -30,7 +38,7 @@ const ProductCard = ({ product }: { product: Product }) => {
       product: product._id,
       name: product.name,
       image: product.image,
-      price: product.price,
+      price: currentPrice,
       countInStock: product.countInStock,
       qty: 1,
     });
@@ -39,21 +47,67 @@ const ProductCard = ({ product }: { product: Product }) => {
 
   return (
     <Link href={`/products/${product._id}`} className="group block bg-white text-[#1c1c1c]">
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7]">
-        {product.image ? (
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        ) : (
-          <div className="atelier-visual h-full w-full transition-transform duration-500 group-hover:scale-105" aria-label={product.name} />
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7] group/card">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentImageIdx}
+            src={images[currentImageIdx]}
+            alt={product.name}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </AnimatePresence>
+
+        {images.length > 1 && (
+          <>
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover/card:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                }}
+                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                }}
+                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            <div className="absolute bottom-12 inset-x-0 flex justify-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+              {images.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    currentImageIdx === idx ? 'bg-primary w-3' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
         )}
         {product.countInStock === 0 ? (
           <span className="absolute left-3 top-3 bg-[#efefef] px-2 py-1 text-[11px] uppercase tracking-[0.08em] text-[#1c1c1c]">
-            Sold Out
+            Out of Stock
           </span>
-        ) : (
+        ) : product.countInStock <= 5 ? (
+          <span className="absolute left-3 top-3 bg-[#ff9900] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+            Only {product.countInStock} Left
+          </span>
+        ) : savings > 0 ? (
           <span className="absolute left-3 top-3 bg-[#df0029] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
             Save {savings}%
           </span>
-        )}
+        ) : null}
         <button
           onClick={handleAddToCart}
           disabled={product.countInStock === 0}
@@ -66,7 +120,7 @@ const ProductCard = ({ product }: { product: Product }) => {
 
       <div className="pt-4 text-center">
         <p className="text-[13px] leading-5">{product.name}</p>
-        <p className="mt-2 text-[13px] text-[#df0029]">{formatINR(product.price)}</p>
+        <p className="mt-2 text-[13px] text-[#df0029]">{formatINR(currentPrice)}</p>
         {regularPrice && <p className="text-[12px] text-[#777] line-through">{formatINR(regularPrice)}</p>}
       </div>
     </Link>

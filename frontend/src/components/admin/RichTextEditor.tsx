@@ -89,6 +89,7 @@ export default function RichTextEditor({ content, onChange, placeholder = 'Start
       }),
     ],
     content,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },

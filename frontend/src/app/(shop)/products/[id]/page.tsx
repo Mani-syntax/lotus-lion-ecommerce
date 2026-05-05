@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useStore } from '@/store/useStore';
-import { ShoppingBag, ChevronRight, Truck, ShieldCheck, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatINR } from '@/lib/currency';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ShoppingBag, Truck, ShieldCheck, RefreshCw } from 'lucide-react';
 
 interface Product {
   _id: string;
@@ -25,7 +27,10 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
   const addToCart = useStore((state) => state.addToCart);
+
+  const images = product?.images && product.images.length > 0 ? product.images : (product?.image ? [product.image] : []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -55,8 +60,20 @@ export default function ProductDetailPage() {
     toast.success('Added to bag');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center uppercase tracking-widest text-xs">Preparing the piece...</div>;
-  if (!product) return <div className="min-h-screen flex items-center justify-center uppercase tracking-widest text-xs">Piece not found.</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+      <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="uppercase tracking-[0.3em] text-[10px] font-bold text-gray-500">Preparing the piece</p>
+    </div>
+  );
+
+  if (!product) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 text-center">
+      <h2 className="brand-heading text-2xl uppercase mb-4">Piece Not Found</h2>
+      <p className="uppercase tracking-[0.2em] text-[10px] text-gray-500 mb-8">The requested item could not be retrieved from the collection.</p>
+      <Link href="/products" className="border-b border-black pb-1 text-[10px] uppercase font-bold tracking-widest">Return to Collection</Link>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white py-12 text-[#1c1c1c] md:py-24">
@@ -72,11 +89,39 @@ export default function ProductDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Image Gallery */}
-          <div className="space-y-4">
-             <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f7]">
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-                ) : (
+          <div className="space-y-6">
+             <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f7] group">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={activeImageIdx}
+                    src={images[activeImageIdx]}
+                    alt={product.name}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full w-full object-cover"
+                  />
+                </AnimatePresence>
+
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
+                {!images[activeImageIdx] && (
                   <div className="atelier-visual h-full w-full">
                     <div className="absolute inset-x-10 bottom-10 z-10 border border-[#1c1c1c] bg-white/80 p-5 text-center">
                       <p className="brand-heading text-xl uppercase">{product.name}</p>
@@ -84,17 +129,35 @@ export default function ProductDetailPage() {
                   </div>
                 )}
              </div>
+
+             {/* Thumbnails */}
+             {images.length > 1 && (
+               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                 {images.map((img, idx) => (
+                   <button
+                     key={idx}
+                     onClick={() => setActiveImageIdx(idx)}
+                     className={`relative flex-shrink-0 w-20 aspect-[3/4] border-2 transition-all ${
+                       activeImageIdx === idx ? 'border-[#1c1c1c]' : 'border-transparent hover:border-gray-200'
+                     }`}
+                   >
+                     <img src={img} alt="" className="w-full h-full object-cover" />
+                   </button>
+                 ))}
+               </div>
+             )}
           </div>
 
           {/* Product Info */}
           <div className="flex flex-col">
             <span className="text-xs font-bold text-primary uppercase tracking-[0.3em] mb-4">{product.category}</span>
             <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tight mb-6">{product.name}</h1>
-            <p className="text-2xl font-medium tracking-widest text-primary mb-8">${product.price.toFixed(2)}</p>
+            <p className="text-2xl font-medium tracking-widest text-primary mb-8">{formatINR(product.price)}</p>
             
-            <p className="mb-12 max-w-lg text-sm leading-relaxed text-[#555] italic">
-              "{product.description}"
-            </p>
+            <div 
+              className="mb-12 max-w-lg text-sm leading-relaxed text-[#555] italic prose prose-sm"
+              dangerouslySetInnerHTML={{ __html: product.description }}
+            />
 
             {/* Quantity Selector */}
             {product.countInStock > 0 && (
@@ -135,7 +198,7 @@ export default function ProductDetailPage() {
                 <Truck className="w-5 h-5 text-primary" />
                 <div>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest">Complimentary Shipping</h4>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">On all orders above $500</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">On all orders above {formatINR(500)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

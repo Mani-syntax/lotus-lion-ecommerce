@@ -18,7 +18,10 @@ cloudinary.config({
  * @returns {Promise<{ url: string, publicId: string }>}
  */
 const uploadBuffer = (buffer, folder = 'lotus-lion/products') => {
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  const hasCredentials = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+  const isPlaceholder = process.env.CLOUDINARY_API_KEY === 'placeholder' || process.env.CLOUDINARY_CLOUD_NAME === 'placeholder';
+  
+  if (!hasCredentials || isPlaceholder) {
     return saveLocalImage(buffer, folder);
   }
 

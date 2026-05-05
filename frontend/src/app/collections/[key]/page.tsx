@@ -8,17 +8,28 @@ import ProductCard from '@/components/ProductCard';
 
 export default function DynamicCollectionPage() {
   const { key } = useParams();
-  const [data, setData] = useState<any>(null);
+  const [collection, setCollection] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get(`/cms/collections/${key}`).then((response) => setData(response.data)).finally(() => setLoading(false));
+    Promise.all([
+      api.get(`/cms/collections/${key}`).catch(() => ({ data: { collection: {} } })),
+      api.get(`/products?collection=${key}`)
+    ]).then(([cmsRes, productsRes]) => {
+      setCollection(cmsRes.data?.collection || { 
+        title: key === 'lotus' ? 'Lotus Collections' : key === 'lion' ? 'Lion Collections' : 'Collection',
+        hero: {
+          title: key === 'lotus' ? 'Lotus Collections' : key === 'lion' ? 'Lion Collections' : 'Collection',
+          subtitle: 'Explore our latest pieces.'
+        }
+      });
+      setProducts(productsRes.data || []);
+    }).finally(() => setLoading(false));
   }, [key]);
 
   if (loading) return <div className="min-h-screen bg-white py-24 text-center uppercase tracking-[0.18em] text-[#777]">Loading collection...</div>;
-  if (!data?.collection) return <div className="min-h-screen bg-white py-24 text-center uppercase tracking-[0.18em] text-[#777]">Collection not found</div>;
-
-  const { collection, products } = data;
+  if (!collection) return <div className="min-h-screen bg-white py-24 text-center uppercase tracking-[0.18em] text-[#777]">Collection not found</div>;
 
   return (
     <main className="bg-white text-[#1c1c1c]">

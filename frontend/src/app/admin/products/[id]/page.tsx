@@ -23,6 +23,7 @@ export default function ProductFormPage() {
     price: 0,
     discountPrice: 0,
     category: 'Lotus Collections',
+    collection: 'lotus',
     collectionType: 'lotus',
     countInStock: 0,
     sizes: { S: 0, M: 0, L: 0, XL: 0 },
@@ -146,20 +147,20 @@ export default function ProductFormPage() {
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold text-gray-500">Store Collection</label>
                   <select
-                    value={formData.collectionType}
+                    value={formData.collection}
                     onChange={(e) => {
                       const type = e.target.value;
                       setFormData({
                         ...formData,
+                        collection: type,
                         collectionType: type,
-                        category: type === 'lotus' ? 'Lotus Collections' : type === 'lion' ? 'Lion Collections' : 'Artist Outfits',
+                        category: type === 'lotus' ? 'Lotus Collections' : 'Lion Collections',
                       });
                     }}
                     className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
                   >
-                    <option value="lotus">Lotus Collection (Women)</option>
-                    <option value="lion">Lion Collection (Men)</option>
-                    <option value="artist">Artist Outfits</option>
+                    <option value="lotus">Lotus Collection</option>
+                    <option value="lion">Lion Collection</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -212,7 +213,7 @@ export default function ProductFormPage() {
            <section className="bg-[#111] border border-white/5 rounded-2xl p-8 space-y-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500/10 text-green-500 rounded-lg"><DollarSign size={20} /></div>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-white">Pricing</h2>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-white">Pricing (INR)</h2>
               </div>
               <div className="space-y-4">
                  <div className="space-y-2">
@@ -233,6 +234,18 @@ export default function ProductFormPage() {
                       onChange={(e) => setFormData({...formData, discountPrice: Number(e.target.value)})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-primary"
                     />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-gray-500">Total Stock (Auto-calculated)</label>
+                    <input 
+                      type="number" 
+                      value={formData.countInStock}
+                      onChange={(e) => setFormData({...formData, countInStock: Number(e.target.value)})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-blue-400 font-bold"
+                    />
+                    <p className="text-[8px] text-gray-600 uppercase font-bold leading-relaxed">
+                      Auto-updated from size inventory. Override manually if needed.
+                    </p>
                  </div>
               </div>
            </section>

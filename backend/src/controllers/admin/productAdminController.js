@@ -31,6 +31,7 @@ const getAdminProducts = async (req, res, next) => {
       category = '',
       sort = '-createdAt',
       lowStock = false,
+      collection = '',
       collectionType = '',
     } = req.query;
 
@@ -40,6 +41,7 @@ const getAdminProducts = async (req, res, next) => {
       { category: { $regex: search, $options: 'i' } },
     ];
     if (category) query.category = category;
+    if (collection) query.collectionName = collection;
     if (collectionType) query.collectionType = collectionType;
     if (lowStock === 'true') query.countInStock = { $gt: 0, $lt: 10 };
 
@@ -82,7 +84,7 @@ const getAdminProductById = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     const {
-      name, slug, description, richDescription, price, discountPrice, category, subcategory, collectionType,
+      name, slug, description, richDescription, price, discountPrice, category, subcategory, collection, collectionType,
       countInStock, sizes, isFeatured, isVisible, isPublished,
       flashSale, releaseDate, tags, imageUrl, image: bodyImage, images: bodyImages,
       videos, sku, colors, isTrending, isNewArrival, visibility, seo, sizeChart, hideWhenOutOfStock,
@@ -107,6 +109,7 @@ const createProduct = async (req, res, next) => {
       discountPrice: Number(discountPrice) || 0,
       category: category || 'Uncategorized',
       subcategory: subcategory || '',
+      collectionName: collection || 'lotus',
       collectionType: collectionType || 'lotus',
       countInStock: Number(countInStock) || 0,
       sizes: parseMaybeJson(sizes, {}),
@@ -148,7 +151,7 @@ const updateProduct = async (req, res, next) => {
     }
 
     const {
-      name, slug, description, richDescription, price, discountPrice, category, subcategory, collectionType,
+      name, slug, description, richDescription, price, discountPrice, category, subcategory, collection, collectionType,
       countInStock, sizes, isFeatured, isVisible, isPublished,
       flashSale, releaseDate, tags, imageUrl, image: bodyImage, images: bodyImages, existingImages,
       videos, sku, colors, isTrending, isNewArrival, visibility, seo, sizeChart, hideWhenOutOfStock,
@@ -177,6 +180,7 @@ const updateProduct = async (req, res, next) => {
     product.discountPrice = discountPrice !== undefined ? Number(discountPrice) : product.discountPrice;
     product.category = category || product.category;
     product.subcategory = subcategory !== undefined ? subcategory : product.subcategory;
+    product.collectionName = collection || product.collectionName;
     product.collectionType = collectionType || product.collectionType;
     product.countInStock = countInStock !== undefined ? Number(countInStock) : product.countInStock;
     product.sizes = sizes !== undefined ? parseMaybeJson(sizes, product.sizes) : product.sizes;

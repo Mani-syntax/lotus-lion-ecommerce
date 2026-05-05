@@ -1,4 +1,6 @@
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const { flush } = require('../services/cacheService');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -19,6 +21,19 @@ const addOrderItems = async (req, res, next) => {
       res.status(400);
       throw new Error('No order items');
     } else {
+      // Check stock for all items first
+      for (const item of orderItems) {
+        const product = await Product.findById(item.product);
+        if (!product) {
+          res.status(404);
+          throw new Error(`Product not found: ${item.name}`);
+        }
+        if (product.countInStock < item.qty) {
+          res.status(400);
+          throw new Error(`Insufficient stock for ${product.name}. Available: ${product.countInStock}`);
+        }
+      }
+
       const order = new Order({
         orderItems,
         user: req.user._id,
@@ -31,6 +46,16 @@ const addOrderItems = async (req, res, next) => {
       });
 
       const createdOrder = await order.save();
+
+      // Deduct stock
+      for (const item of orderItems) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { countInStock: -item.qty }
+        });
+      }
+
+      // Flush product cache since stock changed
+      await flush('products:*');
 
       res.status(201).json(createdOrder);
     }

@@ -85,3 +85,11 @@
 {"level":"error","message":"500 Error: fetcher is not a function","stack":"TypeError: fetcher is not a function\n    at remember (D:\\Lotus & Lion\\backend\\src\\services\\cacheService.js:71:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async D:\\Lotus & Lion\\backend\\src\\routes\\cmsRoutes.js:15:18","timestamp":"2026-05-02T07:38:40.193Z"}
 {"level":"error","message":"500 Error: fetcher is not a function","stack":"TypeError: fetcher is not a function\n    at remember (D:\\Lotus & Lion\\backend\\src\\services\\cacheService.js:71:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async D:\\Lotus & Lion\\backend\\src\\routes\\cmsRoutes.js:15:18","timestamp":"2026-05-02T07:38:40.197Z"}
 {"level":"warn","message":"[Redis] Could not connect. Running without cache (graceful fallback).","timestamp":"2026-05-02T07:39:54.683Z"}
+{"level":"warn","message":"[Redis] Could not connect. Running without cache (graceful fallback).","timestamp":"2026-05-05T06:15:51.205Z"}
+{"level":"warn","message":"[Redis] Could not connect. Running without cache (graceful fallback).","timestamp":"2026-05-05T06:33:45.565Z"}
+{"level":"warn","message":"[Redis] Could not connect. Running without cache (graceful fallback).","timestamp":"2026-05-05T06:39:40.318Z"}
+{"level":"error","message":"[Cloudinary] Upload failed: Invalid api_key placeholder","timestamp":"2026-05-05T06:44:47.378Z"}
+{"level":"error","message":"500 Error: Invalid api_key placeholder","timestamp":"2026-05-05T06:44:47.381Z"}
+{"level":"error","message":"[Cloudinary] Upload failed: Invalid api_key placeholder","timestamp":"2026-05-05T06:46:55.006Z"}
+{"level":"error","message":"500 Error: Invalid api_key placeholder","timestamp":"2026-05-05T06:46:55.009Z"}
+{"level":"warn","message":"[Redis] Could not connect. Running without cache (graceful fallback).","timestamp":"2026-05-05T06:49:46.778Z"}

@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  turbopack: {},
   
   // Performance & Caching Optimization
   compress: true,

@@ -11,6 +11,7 @@ import { formatINR } from '@/lib/currency';
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, userInfo, clearCart } = useStore();
+  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
@@ -18,23 +19,23 @@ export default function CheckoutPage() {
   const [country, setCountry] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.qty * item.price, 0);
+  const subtotal = safeCartItems.reduce((acc, item) => acc + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
 
   useEffect(() => {
     if (!userInfo) {
       router.push('/login?redirect=/checkout');
     }
-    if (cartItems.length === 0) {
+    if (safeCartItems.length === 0) {
       router.push('/cart');
     }
-  }, [userInfo, cartItems, router]);
+  }, [userInfo, safeCartItems.length, router]);
 
   const placeOrderHandler = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const orderData = {
-        orderItems: cartItems,
+        orderItems: safeCartItems,
         shippingAddress: { address, city, postalCode, country },
         paymentMethod: 'Stripe',
         itemsPrice: subtotal,
@@ -46,7 +47,7 @@ export default function CheckoutPage() {
       const { data } = await api.post('/orders', orderData);
       toast.success('Order placed successfully');
       clearCart();
-      router.push(`/orders/${data._id}`);
+      router.push(`/orders/${data.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to place order');
     } finally {
@@ -145,7 +146,7 @@ export default function CheckoutPage() {
             <div className="bg-secondary dark:bg-[#111] p-8 border border-border">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] mb-8">Order Review</h2>
               <div className="space-y-4 max-h-60 overflow-y-auto pr-2 mb-8">
-                {cartItems.map((item) => (
+                {safeCartItems.map((item) => (
                   <div key={item.product} className="flex gap-4">
                     <img src={item.image} alt={item.name} className="w-12 h-16 object-cover bg-white" />
                     <div className="flex-grow">

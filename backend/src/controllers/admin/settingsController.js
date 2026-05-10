@@ -1,59 +1,89 @@
-const Settings = require('../../models/Settings');
-const { flush } = require('../../services/cacheService');
+const supabase = require('../../config/supabase');
+const { flush, get, set } = require('../../services/cacheService');
 
-const DEFAULT_SETTINGS = [
-  { key: 'globalDiscount', value: { enabled: false, percentage: 0 }, label: 'Global Discount', description: 'Apply a discount % to all products' },
-  { key: 'flashSale', value: { enabled: false, label: 'Flash Sale', endsAt: null }, label: 'Flash Sale', description: 'Toggle flash sale mode globally' },
-  { key: 'maintenanceMode', value: { enabled: false, message: 'We are back soon!' }, label: 'Maintenance Mode', description: 'Put the site in maintenance mode' },
-  { key: 'siteMeta', value: { name: 'Lotus & Lion', tagline: 'Modern luxury clothing for the pioneer' }, label: 'Site Meta', description: 'Site name and tagline' },
-  { key: 'shipping', value: { freeThreshold: 150, cost: 10 }, label: 'Shipping', description: 'Free shipping threshold and default cost' },
-];
-
-// ─── GET ALL SETTINGS ─────────────────────────────────────────────────────────
 const getSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.find({});
-    // Seed defaults if empty
-    if (settings.length === 0) {
-      await Settings.insertMany(DEFAULT_SETTINGS);
-      settings = await Settings.find({});
+    const cacheKey = 'settings:all';
+    
+    // Try cache first
+    let formatted = await get(cacheKey);
+    if (formatted) {
+      return res.json(formatted);
     }
-    // Return as key-value map
-    const map = {};
-    settings.forEach(s => { map[s.key] = { value: s.value, label: s.label, description: s.description }; });
-    res.json(map);
+
+    const { data, error } = await supabase.from('content').select('*').eq('key', 'settings').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    const settingsData = data?.data || {};
+    
+    // Map to frontend expectation
+    formatted = {
+      siteMeta: { value: { 
+        name: settingsData.site_name || 'Lotus & Lion', 
+        tagline: settingsData.site_description || '', 
+        whatsapp: settingsData.whatsapp_number || '',
+        instagram: settingsData.instagram_url || '',
+        twitter: settingsData.twitter_url || '',
+        pinterest: settingsData.pinterest_url || ''
+      } },
+    };
+    
+    // Cache for 10 minutes
+    await set(cacheKey, formatted, 600);
+    res.json(formatted);
   } catch (error) { next(error); }
 };
 
-// ─── UPDATE SETTING ───────────────────────────────────────────────────────────
-const updateSetting = async (req, res, next) => {
-  try {
-    const { key } = req.params;
-    const { value } = req.body;
-    if (value === undefined) { res.status(400); throw new Error('Value is required'); }
-
-    const setting = await Settings.findOneAndUpdate(
-      { key },
-      { $set: { value } },
-      { new: true, upsert: true }
-    );
-    await flush('settings:*');
-    res.json({ key, value: setting.value });
-  } catch (error) { next(error); }
-};
-
-// ─── UPDATE MULTIPLE SETTINGS ─────────────────────────────────────────────────
 const updateSettings = async (req, res, next) => {
   try {
-    const updates = req.body; // { key: value, ... }
-    await Promise.all(
-      Object.entries(updates).map(([key, value]) =>
-        Settings.findOneAndUpdate({ key }, { $set: { value } }, { new: true, upsert: true })
-      )
-    );
+    const { siteMeta } = req.body;
+    const metaValue = siteMeta?.value || {};
+    
+    const settingsData = {
+      site_name: metaValue.name || 'Lotus & Lion',
+      site_description: metaValue.tagline || '',
+      whatsapp_number: metaValue.whatsapp || '',
+      instagram_url: metaValue.instagram || '',
+      twitter_url: metaValue.twitter || '',
+      pinterest_url: metaValue.pinterest || ''
+    };
+
+    // Use explicit upsert with better error handling
+    const { data, error } = await supabase.from('content').upsert({
+      key: 'settings',
+      type: 'settings',
+      data: settingsData,
+      updated_at: new Date().toISOString()
+    }, { 
+      onConflict: 'key',
+      ignoreDuplicates: false
+    }).select().single();
+
+    if (error) {
+      console.error('[Settings] Update error:', error);
+      throw error;
+    }
+
+    // Invalidate cache after successful update
     await flush('settings:*');
-    res.json({ message: 'Settings updated' });
-  } catch (error) { next(error); }
+    
+    // Return the updated formatted settings
+    const formatted = {
+      siteMeta: { value: {
+        name: settingsData.site_name || 'Lotus & Lion',
+        tagline: settingsData.site_description || '',
+        whatsapp: settingsData.whatsapp_number || '',
+        instagram: settingsData.instagram_url || '',
+        twitter: settingsData.twitter_url || '',
+        pinterest: settingsData.pinterest_url || ''
+      } }
+    };
+    
+    res.json(formatted);
+  } catch (error) { 
+    console.error('[Settings] Controller error:', error);
+    next(error); 
+  }
 };
 
-module.exports = { getSettings, updateSetting, updateSettings };
+module.exports = { getSettings, updateSettings, updateSetting: updateSettings };

@@ -1,53 +1,107 @@
-# Lotus & Lion - Luxury E-Commerce Platform
+# 🌸 Lotus & Lion - Luxury Fashion E-Commerce Platform
 
-A production-ready, scalable, and dynamic clothing brand platform built with the MERN stack (MongoDB, Express, React/Next.js, Node.js).
+> A production-ready, scalable luxury clothing brand platform built with Next.js, Supabase, and modern web technologies.
 
-## Tech Stack
-- **Frontend**: Next.js 15 (App Router), Tailwind CSS v4, Lucide Icons, Framer Motion, Zustand.
-- **Backend**: Node.js, Express.js, MongoDB (Mongoose), JWT, Bcrypt.
-- **Payment**: Stripe Integration ready.
-- **Images**: Cloudinary ready.
+## 🎯 Overview
 
-## Core Features
-1. **Premium UI/UX**: Minimal luxury theme (Black, White, Gold).
-2. **Dynamic Collection**: Admin panel to add/edit/delete products instantly.
-3. **Cart & Checkout**: Persistent cart and secure checkout flow.
-4. **Auth System**: JWT-based login and registration.
-5. **Inventory Management**: Real-time stock tracking and price updates.
-6. **Mobile First**: Fully responsive design for all devices.
+Lotus & Lion is a complete luxury fashion e-commerce platform featuring:
 
-## Getting Started
+- **Dynamic Collections**: Lotus and Lion collections with separate products and branding
+- **Full Admin Control**: CMS, product management, order tracking, blog system
+- **Advanced Features**: Scheduled drops, inventory management, rich content editing
+- **Premium Design**: Black, white, and gold luxury aesthetic with smooth animations
+- **Production Ready**: Real-world scalable architecture with best practices
 
-### 1. Prerequisites
-- Node.js (v18+)
-- MongoDB Atlas account or local MongoDB
-- Stripe Account (for API keys)
-- Cloudinary Account (for image hosting)
+## 💻 Tech Stack
 
-### 2. Environment Setup
-Create a `.env` file in the `backend/` directory:
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_uri
-JWT_SECRET=your_secret_key
-STRIPE_SECRET_KEY=your_stripe_secret
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-NODE_ENV=development
-```
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 15, React 19, Tailwind CSS, Framer Motion |
+| **Backend** | Supabase (PostgreSQL), APIs |
+| **Authentication** | Supabase Auth with JWT |
+| **Payments** | Razorpay (INR) |
+| **Images** | Cloudinary |
+| **State** | Zustand + localStorage |
+| **Hosting** | Vercel (Frontend), Supabase (Backend) |
 
-Create a `.env.local` file in the `frontend/` directory:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
+## 🚀 Quick Start
 
-### 3. Installation & Seeding
+### 1️⃣ Prerequisites
+- Node.js 18+
+- Supabase account
+- Cloudinary account
+- Razorpay account (India)
+
+### 2️⃣ Environment Setup
 ```bash
-# Install backend dependencies
-cd backend
+cd frontend
+cp .env.example .env.local
+# Fill in your credentials from Supabase, Cloudinary, and Razorpay
+```
+
+### 3️⃣ Install & Run
+```bash
 npm install
-npm run data:import # Seed sample data
+npm run dev
+# Open http://localhost:3000
+```
+
+## 📁 Project Structure
+
+```
+lotus-lion/
+├── frontend/              # Next.js application
+│   ├── src/app/          # Pages and routes
+│   ├── components/       # React components
+│   ├── lib/              # Services and utilities
+│   ├── store/            # Zustand stores
+│   └── public/           # Static assets
+├── supabase/             # Database schema
+│   └── migrations/       # SQL migrations
+├── SETUP_GUIDE.md        # Detailed setup instructions
+└── IMPLEMENTATION_GUIDE.md # Feature checklist
+```
+
+## 🚀 Core Features
+
+### For Customers ✨
+- Luxurious, responsive design
+- Dynamic product browsing
+- Persistent shopping cart
+- Razorpay payment (INR)
+- Blog reading
+- Account management
+
+### For Admins 📊
+- Analytics dashboard
+- Product management (CRUD)
+- Collection management
+- Blog management
+- Order management
+- CMS & content editing
+- Inventory tracking
+- Email notifications
+
+## 📚 Documentation
+
+**Start here**:
+1. [SETUP_GUIDE.md](./SETUP_GUIDE.md) - Complete setup with credentials
+2. [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md) - Feature checklist
+
+## 💳 Payments
+
+**Razorpay** (India-only):
+- INR currency support
+- Test and live modes
+- Payment verification
+- Order creation
+
+## 🖼️ Images
+
+**Cloudinary**:
+- Optimized delivery
+- Automatic resizing
+- CDN caching
 
 # Install frontend dependencies
 cd ../frontend

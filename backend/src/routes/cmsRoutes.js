@@ -1,85 +1,139 @@
 const express = require('express');
-const Content = require('../models/Content');
-const Collection = require('../models/Collection');
-const HomepageSection = require('../models/HomepageSection');
-const Announcement = require('../models/Announcement');
-const Theme = require('../models/Theme');
-const Blog = require('../models/Blog');
-const Product = require('../models/Product');
+const supabase = require('../config/supabase');
 const { remember } = require('../services/cacheService');
 
 const router = express.Router();
 
+const mapProduct = (p) => {
+  if (!p) return null;
+  return {
+    _id: p.id,
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    discountPrice: p.discount_price,
+    image: p.images?.[0]?.image_url || p.image_url,
+    brand: 'Lotus & Lion',
+    category: p.category,
+    countInStock: p.stock_quantity,
+    collectionType: p.collection_id
+  };
+};
+
 router.get('/site', async (req, res, next) => {
   try {
     const data = await remember('content:site', async () => {
-      const now = new Date();
-      const [home, navbar, footer, pages, collections, sections, announcements, theme, blogs, featuredProducts, lotusProducts, lionProducts] = await Promise.all([
-        Content.findOne({ key: 'home' }),
-        Content.findOne({ key: 'navbar' }),
-        Content.findOne({ key: 'footer' }),
-        Content.find({ type: 'page', isPublished: true }).select('title slug metaTitle metaDescription updatedAt'),
-        Collection.find({ isEnabled: true }),
-        HomepageSection.find({ isEnabled: true }).sort('order'),
-        Announcement.find({
-          isActive: true,
-          $and: [
-            { $or: [{ startsAt: { $exists: false } }, { startsAt: null }, { startsAt: { $lte: now } }] },
-            { $or: [{ endsAt: { $exists: false } }, { endsAt: null }, { endsAt: { $gte: now } }] },
-          ],
-        }).sort('-updatedAt'),
-        Theme.findOne({ key: 'default' }),
-        Blog.find({ status: 'published' }).sort('-publishAt -createdAt').limit(6),
-        Product.find({ isPublished: true, isVisible: true, isFeatured: true }).sort('-updatedAt').limit(12),
-        Product.find({ isPublished: true, isVisible: true, collectionType: 'lotus' }).sort('-createdAt').limit(8),
-        Product.find({ isPublished: true, isVisible: true, collectionType: 'lion' }).sort('-createdAt').limit(8),
+      // 1. Fetch base configuration in parallel
+      const [
+        { data: sections },
+        { data: collections },
+        { data: contentItems },
+        { data: announcements }
+      ] = await Promise.all([
+        supabase.from('homepage_sections').select('*').order('display_order'),
+        supabase.from('collections').select('*'),
+        supabase.from('content').select('*'),
+        supabase.from('announcements').select('*').limit(5)
       ]);
+
+      const lotusId = collections?.find(c => c.slug === 'lotus')?.id;
+      const lionId = collections?.find(c => c.slug === 'lion')?.id;
+
+      // 2. Fetch products in parallel using identified IDs
+      // We only select the fields needed for the homepage to keep the payload small
+      const productSelect = 'id, name, slug, price, discount_price, category, stock_quantity, is_featured, collection_id, product_images(image_url, is_main)';
+      
+      const [
+        { data: featuredProducts },
+        { data: lotusProducts },
+        { data: lionProducts }
+      ] = await Promise.all([
+        supabase.from('products').select(productSelect).eq('is_featured', true).limit(12),
+        lotusId ? supabase.from('products').select(productSelect).eq('collection_id', lotusId).limit(8) : { data: [] },
+        lionId ? supabase.from('products').select(productSelect).eq('collection_id', lionId).limit(8) : { data: [] }
+      ]);
+
+      const findContent = (key) => contentItems?.find(c => c.key === key)?.data || (key === 'navbar' || key === 'footer' ? [] : {});
+
       return {
-        home: home?.data || null,
-        navbar: navbar?.data || [],
-        footer: footer?.data || [],
-        pages,
-        collections,
-        sections,
-        announcements,
-        theme,
-        blogs,
-        featuredProducts,
-        lotusProducts,
-        lionProducts,
+        home: findContent('home'),
+        navbar: findContent('navbar'),
+        footer: findContent('footer'),
+        pages: contentItems?.filter(c => c.type === 'page').map(p => ({ ...p, ...p.data })) || [],
+        collections: collections || [],
+        sections: sections || [],
+        announcements: announcements || [],
+        theme: findContent('theme'),
+        settings: findContent('settings'),
+        blogs: [], 
+        featuredProducts: (featuredProducts || []).map(p => mapProduct({ ...p, images: p.product_images })),
+        lotusProducts: (lotusProducts || []).map(p => mapProduct({ ...p, images: p.product_images })),
+        lionProducts: (lionProducts || []).map(p => mapProduct({ ...p, images: p.product_images }))
       };
-    }, 60);
+    }, 60); // 60 second cache
+    // Set Cache-Control header for Vercel Edge Caching
+    // s-maxage=60: cache for 60 seconds on the CDN
+    // stale-while-revalidate=3600: serve stale content for up to an hour while fetching fresh data in the background
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=3600');
     res.json(data);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/settings', async (req, res, next) => {
+  try {
+    const { data, error } = await supabase.from('content').select('*').eq('key', 'settings').single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json(data?.data || {});
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/collections/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    // 1. Fetch the collection details
+    const { data: collection, error: colError } = await supabase
+      .from('collections')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (colError) throw colError;
+
+    // 2. Fetch the products in this collection
+    const { data: products, error: prodError } = await supabase
+      .from('products')
+      .select('*, images:product_images(*)')
+      .eq('collection_id', id);
+
+    if (prodError) throw prodError;
+
+    res.json({
+      ...collection,
+      products: (products || []).map(mapProduct)
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get('/blogs', async (req, res, next) => {
   try {
-    const blogs = await Blog.find({ status: 'published' }).sort('-publishAt -createdAt');
-    res.json(blogs);
+    const { data, error } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data.map(b => ({ ...b, _id: b.id })));
   } catch (error) { next(error); }
 });
 
 router.get('/blogs/:slug', async (req, res, next) => {
   try {
-    const blog = await Blog.findOne({ slug: req.params.slug, status: 'published' });
-    if (!blog) {
-      res.status(404);
-      throw new Error('Blog not found');
-    }
-    res.json(blog);
-  } catch (error) { next(error); }
-});
-
-router.get('/collections/:key', async (req, res, next) => {
-  try {
-    const collection = await Collection.findOne({ key: req.params.key, isEnabled: true });
-    if (!collection) {
-      res.status(404);
-      throw new Error('Collection not found');
-    }
-    const products = await Product.find({ collectionType: req.params.key, isPublished: true, isVisible: true }).sort('-createdAt');
-    res.json({ collection, products });
+    const { data, error } = await supabase.from('blogs').select('*').eq('slug', req.params.slug).single();
+    if (error || !data) { res.status(404); throw new Error('Blog not found'); }
+    res.json({ ...data, _id: data.id });
   } catch (error) { next(error); }
 });
 

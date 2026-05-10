@@ -5,32 +5,34 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const { connectDB } = require('./config/db');
 const { connectRedis } = require('./config/redis');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
 
-connectRedis();
-
-(async () => {
-  try {
-    await connectDB();
-  } catch (error) {
-    console.error(`[DB] Failed to connect: ${error.message}`);
-  }
-})();
+if (!process.env.VERCEL) {
+  connectRedis();
+}
 
 const app = express();
+
+// Trust proxy for Vercel
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
+  'https://frontend-beta-pink-8l4h9umjb7.vercel.app',
+  'https://frontend-fujd6aa09-mk0081709-6527s-projects.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3002',
 ];
 
 // Also allow any Vercel preview/production URLs
@@ -38,6 +40,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
     if (origin.endsWith('.vercel.app')) return callback(null, true);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
@@ -53,7 +56,14 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Rate Limiting
-app.use('/api', apiLimiter);
+if (!process.env.VERCEL) {
+  app.use('/api', apiLimiter);
+}
+
+app.use((req, res, next) => {
+  console.log(`[API Request] ${req.method} ${req.url}`);
+  next();
+});
 
 // Routes
 app.get('/', (req, res) => {
@@ -62,6 +72,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/collections', require('./routes/collectionRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/cms', require('./routes/cmsRoutes'));
@@ -70,50 +81,10 @@ app.use('/api/cms', require('./routes/cmsRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
-// Scheduled Drop System
-const cron = require('node-cron');
-const Product = require('./models/Product');
-const Blog = require('./models/Blog');
-const Collection = require('./models/Collection');
-const { flush } = require('./services/cacheService');
-
-cron.schedule('* * * * *', async () => {
-  try {
-    const now = new Date();
-    const [productResult, blogResult, stockResult] = await Promise.all([
-      Product.updateMany(
-      { releaseDate: { $lte: now }, isPublished: false },
-      { $set: { isPublished: true, isVisible: true, visibility: 'visible' } }
-      ),
-      Blog.updateMany(
-        { publishAt: { $lte: now }, status: 'scheduled' },
-        { $set: { status: 'published' } }
-      ),
-      Product.updateMany(
-        { countInStock: { $lte: 0 }, hideWhenOutOfStock: true, isVisible: true },
-        { $set: { isVisible: false, visibility: 'hidden' } }
-      ),
-    ]);
-
-    const collections = await Collection.find({ 'dropSchedules.launchAt': { $lte: now }, 'dropSchedules.status': 'scheduled' });
-    await Promise.all(collections.map(async (collection) => {
-      collection.dropSchedules = collection.dropSchedules.map((drop) => {
-        if (drop.status === 'scheduled' && drop.launchAt && drop.launchAt <= now) drop.status = 'live';
-        if (drop.status === 'live' && drop.endAt && drop.endAt <= now) drop.status = 'ended';
-        return drop;
-      });
-      return collection.save();
-    }));
-
-    if (productResult.modifiedCount || blogResult.modifiedCount || stockResult.modifiedCount || collections.length) {
-      await flush('content:*');
-      await flush('products:*');
-      console.log(`[SCHEDULED CMS] products=${productResult.modifiedCount} blogs=${blogResult.modifiedCount} stockHidden=${stockResult.modifiedCount} drops=${collections.length}`);
-    }
-  } catch (error) {
-    console.error('[CRON ERROR]', error);
-  }
-});
+// Scheduled Drop System — temporarily disabled during migration to Supabase
+if (require.main === module) {
+  // Cron logic will be updated to Supabase in a follow-up step
+}
 
 module.exports = app;
 
@@ -121,5 +92,6 @@ const PORT = process.env.PORT || 5000;
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`[SERVER] Running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    console.log(`[DB] Supabase connected (Unified)`);
   });
 }

@@ -22,7 +22,7 @@ export default function AdminOrders() {
       await api.put(`/admin/orders/${id}/status`, { status: newStatus });
       toast.success('Order status updated');
       refresh();
-      if (selectedOrder?._id === id) {
+      if (selectedOrder?.id === id) {
         const { data: updated } = await api.get(`/admin/orders/${id}`);
         setSelectedOrder(updated);
       }
@@ -40,7 +40,7 @@ export default function AdminOrders() {
 
     const headers: string[] = ['Order ID', 'Customer', 'Email', 'Date', 'Status', 'Paid', 'Delivered', 'Total'];
     const rows: string[][] = orders.map((order: any) => [
-      order._id,
+      order.id,
       order.user?.name || '',
       order.user?.email || '',
       new Date(order.createdAt).toISOString(),
@@ -67,7 +67,7 @@ export default function AdminOrders() {
     {
       header: 'Order ID',
       accessor: (item: any) => (
-        <span className="text-[10px] font-mono text-gray-500">#{item._id.slice(-8)}</span>
+        <span className="text-[10px] font-mono text-gray-500">#{item.id.slice(-8)}</span>
       ),
     },
     {
@@ -165,7 +165,7 @@ export default function AdminOrders() {
       <Modal 
         isOpen={!!selectedOrder} 
         onClose={() => setSelectedOrder(null)} 
-        title={`Order Details #${selectedOrder?._id.slice(-8)}`}
+        title={`Order Details #${selectedOrder?.id.slice(-8)}`}
         size="lg"
       >
         {selectedOrder && (
@@ -208,7 +208,7 @@ export default function AdminOrders() {
                   {['pending', 'paid', 'shipped', 'delivered'].map((s) => (
                     <button
                       key={s}
-                      onClick={() => updateStatus(selectedOrder._id, s)}
+                      onClick={() => updateStatus(selectedOrder.id, s)}
                       className={`px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all ${
                         selectedOrder.status === s 
                           ? 'bg-primary text-black' 

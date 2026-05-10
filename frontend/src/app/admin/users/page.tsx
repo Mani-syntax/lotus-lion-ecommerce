@@ -108,7 +108,7 @@ export default function AdminUsers() {
           {userInfo?.role === 'super-admin' && (
              <>
                 <button 
-                  onClick={() => toggleBlockStatus(item._id, item.isBlocked)}
+                  onClick={() => toggleBlockStatus(item.id, item.isBlocked)}
                   className={`p-2 rounded-lg transition-colors ${item.isBlocked ? 'text-green-500 hover:bg-green-500/5' : 'text-red-500 hover:bg-red-500/5'}`}
                   title={item.isBlocked ? 'Unblock' : 'Block'}
                 >
@@ -119,15 +119,15 @@ export default function AdminUsers() {
                     <Shield size={14} />
                   </button>
                   <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-[#1a1a1a] border border-white/10 rounded-lg p-1 z-50 shadow-2xl">
-                    <button onClick={() => changeRole(item._id, 'user')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded">User</button>
-                    <button onClick={() => changeRole(item._id, 'admin')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-primary hover:bg-primary/5 rounded">Admin</button>
-                    <button onClick={() => changeRole(item._id, 'super-admin')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-purple-500 hover:bg-purple-500/5 rounded">Super Admin</button>
+                    <button onClick={() => changeRole(item.id, 'user')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded">User</button>
+                    <button onClick={() => changeRole(item.id, 'admin')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-primary hover:bg-primary/5 rounded">Admin</button>
+                    <button onClick={() => changeRole(item.id, 'super-admin')} className="block w-full text-left px-3 py-2 text-[8px] uppercase font-bold text-purple-500 hover:bg-purple-500/5 rounded">Super Admin</button>
                   </div>
                 </div>
                 <button 
-                  onClick={() => setIsDeleting(item._id)}
+                  onClick={() => setIsDeleting(item.id)}
                   className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
-                  disabled={userInfo?._id === item._id}
+                  disabled={userInfo?.id === item.id}
                 >
                   <Trash2 size={14} />
                 </button>

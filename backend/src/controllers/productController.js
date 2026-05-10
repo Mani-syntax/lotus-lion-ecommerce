@@ -1,143 +1,139 @@
-const Product = require('../models/Product');
-const { remember } = require('../services/cacheService');
+const supabase = require('../config/supabase');
+const { remember, flush } = require('../services/cacheService');
 
-// @desc    Fetch all products
-// @route   GET /api/products
-// @access  Public
+const mapToCamelCase = (p) => {
+  if (!p) return null;
+  
+  // Handle joined images array - items can be objects {image_url: '...'} or plain strings
+  let images = [];
+  if (p.images && Array.isArray(p.images) && p.images.length > 0) {
+    images = p.images
+      .map(img => (typeof img === 'string' ? img : img?.image_url))
+      .filter(Boolean);
+  }
+  const mainImage = images[0] || null;
+
+  return {
+    _id: p.id,
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    description: p.description,
+    richDescription: p.rich_description,
+    price: p.price,
+    discountPrice: p.discount_price,
+    category: p.category,
+    collection: p.collection_id,
+    collectionType: p.collection_id,
+    countInStock: p.stock_quantity,
+    isFeatured: p.is_featured,
+    isVisible: p.is_visible,
+    image: mainImage,
+    images: images,
+    variants: p.variants || [],
+    brand: 'Lotus & Lion'
+  };
+};
+
+// Helper: Create cache key for product queries
+const getProductsCacheKey = (query) => {
+  const { keyword, category, collectionType, page = 1, limit = 12 } = query;
+  return `products:list:${collectionType || 'all'}:${category || 'all'}:${keyword || 'all'}:p${page}:l${limit}`;
+};
+
+// @route GET /api/products
 const getProducts = async (req, res, next) => {
   try {
-    const { collection, category } = req.query;
+    const { keyword, category, collectionType, page = 1, limit = 12 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit))); // Cap at 100
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
+
+    const cacheKey = getProductsCacheKey(req.query);
     
-    // Cache key based on query params
-    const cacheKey = `products:public:${collection || 'all'}:${category || 'all'}`;
+    // Use longer cache TTL (10 min) since products change less frequently
+    const data = await remember(cacheKey, async () => {
+      let query = supabase
+        .from('products')
+        .select('id, name, slug, price, discount_price, category, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url)', { count: 'exact' })
+        .eq('is_visible', true);
 
-    const products = await remember(cacheKey, async () => {
-      const now = new Date();
-      const query = { 
-        isVisible: true,
-        $or: [
-          { releaseDate: { $lte: now } },
-          { releaseDate: { $exists: false } },
-          { releaseDate: null }
-        ]
-      };
+      if (keyword) query = query.ilike('name', `%${keyword}%`);
+      if (category) query = query.eq('category', category);
+      if (collectionType) query = query.eq('collection_id', collectionType);
 
-      if (category) query.category = category;
-      if (collection) query.collectionName = collection;
+      const { data: products, error } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-      return await Product.find(query).sort('-createdAt');
-    });
+      if (error) throw error;
+      return products.map(mapToCamelCase);
+    }, 600); // 10 min cache for better performance
 
-    res.json(products);
-  } catch (error) {
-    next(error);
-  }
+    // Browser cache: 60s, CDN stale-while-revalidate: 1200s (20 min)
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=1200');
+    res.json(data);
+  } catch (error) { next(error); }
 };
 
-// @desc    Fetch single product
-// @route   GET /api/products/:id
-// @access  Public
-const getProductById = async (req, res, next) => {
+// @route GET /api/products/:slug
+const getProductBySlug = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const slug = req.params.slug.toLowerCase().trim();
+    const cacheKey = `product:slug:${slug}`;
+    
+    const data = await remember(cacheKey, async () => {
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('id, name, slug, description, rich_description, price, discount_price, category, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url), variants:product_variants(*)')
+        .eq('slug', slug)
+        .eq('is_visible', true)
+        .single();
 
-    if (product) {
-      res.json(product);
-    } else {
+      if (error || !product) {
+        return null;
+      }
+      return mapToCamelCase(product);
+    }, 1800); // 30 min cache for individual product pages
+
+    if (!data) {
       res.status(404);
       throw new Error('Product not found');
     }
-  } catch (error) {
-    next(error);
-  }
+
+    // Aggressive caching for product detail pages
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    res.json(data);
+  } catch (error) { next(error); }
 };
 
-// @desc    Delete a product
-// @route   DELETE /api/products/:id
-// @access  Private/Admin
-const deleteProduct = async (req, res, next) => {
+// @route GET /api/products/featured
+const getFeaturedProducts = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const cacheKey = 'products:featured:latest';
+    
+    const data = await remember(cacheKey, async () => {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('id, name, slug, price, discount_price, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url)')
+        .eq('is_featured', true)
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false })
+        .limit(8);
 
-    if (product) {
-      await Product.deleteOne({ _id: product._id });
-      res.json({ message: 'Product removed' });
-    } else {
-      res.status(404);
-      throw new Error('Product not found');
-    }
-  } catch (error) {
-    next(error);
-  }
-};
+      if (error) throw error;
+      return products.map(mapToCamelCase);
+    }, 900); // 15 min cache for featured products
 
-// @desc    Create a product
-// @route   POST /api/products
-// @access  Private/Admin
-const createProduct = async (req, res, next) => {
-  try {
-    const product = new Product({
-      name: 'Sample name',
-      price: 0,
-      image: '/images/sample.jpg',
-      brand: 'Sample brand',
-      category: 'Sample category',
-      countInStock: 0,
-      description: 'Sample description',
-    });
-
-    const createdProduct = await product.save();
-    res.status(201).json(createdProduct);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Update a product
-// @route   PUT /api/products/:id
-// @access  Private/Admin
-const updateProduct = async (req, res, next) => {
-  try {
-    const {
-      name,
-      price,
-      description,
-      image,
-      brand,
-      category,
-      countInStock,
-      isPublished,
-      releaseDate,
-    } = req.body;
-
-    const product = await Product.findById(req.params.id);
-
-    if (product) {
-      product.name = name || product.name;
-      product.price = price || product.price;
-      product.description = description || product.description;
-      product.image = image || product.image;
-      product.brand = brand || product.brand;
-      product.category = category || product.category;
-      product.countInStock = countInStock || product.countInStock;
-      product.isPublished = isPublished !== undefined ? isPublished : product.isPublished;
-      product.releaseDate = releaseDate || product.releaseDate;
-
-      const updatedProduct = await product.save();
-      res.json(updatedProduct);
-    } else {
-      res.status(404);
-      throw new Error('Product not found');
-    }
-  } catch (error) {
-    next(error);
-  }
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=1800');
+    res.json(data);
+  } catch (error) { next(error); }
 };
 
 module.exports = {
   getProducts,
-  getProductById,
-  deleteProduct,
-  createProduct,
-  updateProduct,
+  getProductBySlug,
+  getFeaturedProducts,
+  getTrendingProducts: async (req, res) => res.json([]),
 };

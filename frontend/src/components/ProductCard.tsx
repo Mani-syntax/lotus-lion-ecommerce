@@ -13,6 +13,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface Product {
   _id: string;
   name: string;
+  slug: string;
   price: number;
   discountPrice?: number;
   image: string;
@@ -20,7 +21,7 @@ interface Product {
   category: string;
   collectionType?: 'lotus' | 'lion' | 'artist';
   countInStock: number;
-  images?: string[];
+  images?: (string | { image_url: string })[];
 }
 
 const ProductCard = ({ product }: { product: Product }) => {
@@ -35,7 +36,7 @@ const ProductCard = ({ product }: { product: Product }) => {
   const handleAddToCart = (e: MouseEvent) => {
     e.preventDefault();
     addToCart({
-      product: product._id,
+      product: product.id,
       name: product.name,
       image: product.image,
       price: currentPrice,
@@ -46,12 +47,17 @@ const ProductCard = ({ product }: { product: Product }) => {
   };
 
   return (
-    <Link href={`/products/${product._id}`} className="group block bg-white text-[#1c1c1c]">
+    <Link href={`/product/${product.slug}`} className="group block bg-white text-[#1c1c1c]">
       <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7] group/card">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIdx}
-            src={images[currentImageIdx]}
+            src={(() => {
+              const img = images[currentImageIdx];
+              if (!img) return 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000';
+              const url = typeof img === 'string' ? img : (img as any).image_url;
+              return url || 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000';
+            })()}
             alt={product.name}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -41,33 +41,54 @@ const navItems = [
   { name: 'Site Settings', href: '/admin/settings', icon: Settings },
 ];
 
+const persistedStore = useStore as typeof useStore & {
+  persist: {
+    hasHydrated: () => boolean;
+    onFinishHydration: (callback: () => void) => () => void;
+  };
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userInfo, setUserInfo } = useStore();
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    setHasHydrated(persistedStore.persist.hasHydrated());
+    return persistedStore.persist.onFinishHydration(() => setHasHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+
     if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super-admin' && !userInfo.isAdmin)) {
       toast.error('Unauthorized access');
-      router.push('/login');
+      router.push('/login?redirect=/admin/control-center');
     }
-  }, [userInfo, router]);
+  }, [hasHydrated, userInfo, router]);
 
   const logoutHandler = async () => {
     try {
       await api.post('/auth/logout');
       setUserInfo(null);
       localStorage.removeItem('lotus-lion-storage');
-      router.push('/login');
+      router.push('/login?redirect=/admin/control-center');
       toast.success('Logged out');
     } catch (error) {
       setUserInfo(null);
-      router.push('/login');
+      router.push('/login?redirect=/admin/control-center');
     }
   };
 
-  if (!userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super-admin' && !userInfo.isAdmin)) return null;
+  if (!hasHydrated || !userInfo || (userInfo.role !== 'admin' && userInfo.role !== 'super-admin' && !userInfo.isAdmin)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfbf7] text-[10px] font-bold uppercase tracking-[0.3em] text-[#4f4b43]">
+        Opening admin sign in...
+      </div>
+    );
+  }
 
   return (
     <div className="admin-panel flex min-h-screen bg-[#fcfbf7] text-[#1c1c1c] selection:bg-[#c8a45d] selection:text-black">

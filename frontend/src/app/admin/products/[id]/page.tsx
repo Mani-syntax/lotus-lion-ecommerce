@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAdminData } from '@/hooks/useAdminData';
 import AdminHeader from '@/components/admin/AdminHeader';
 import ImageUploader from '@/components/admin/ImageUploader';
 import RichTextEditor from '@/components/admin/RichTextEditor';
-import { Save, X, Package, Tag, DollarSign, Layers, Calendar, Star, Eye, Zap, Loader2 } from 'lucide-react';
+import { Save, Package, Tag, DollarSign, Layers, Calendar, Star, Eye, Zap, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
-export default function ProductFormPage() {
+export default function ProductFormPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = useParams();
+  const { id } = use(params);
   const isNew = id === 'new';
   
   const { data: product, loading } = useAdminData(isNew ? '' : `/admin/products/${id}`);
@@ -41,9 +41,19 @@ export default function ProductFormPage() {
 
   useEffect(() => {
     if (product && !isNew) {
+      const formattedDate = product.releaseDate 
+        ? (() => {
+            const date = new Date(product.releaseDate);
+            return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+          })() 
+        : '';
+
       setFormData({
+        ...formData, // Keep defaults for missing fields
         ...product,
-        releaseDate: product.releaseDate ? new Date(product.releaseDate).toISOString().split('T')[0] : '',
+        sizes: product.sizes || formData.sizes,
+        images: Array.isArray(product.images) ? product.images : (product.image ? [product.image] : []),
+        releaseDate: formattedDate,
       });
     }
   }, [product, isNew]);
@@ -78,6 +88,13 @@ export default function ProductFormPage() {
   if (loading && !isNew) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Loader2 className="animate-spin text-primary" size={40} />
+    </div>
+  );
+
+  if (!product && !isNew) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+      <p className="text-gray-400">Piece not found in the archives.</p>
+      <button onClick={() => router.push('/admin/products')} className="text-primary text-[10px] uppercase font-bold tracking-widest">Back to catalog</button>
     </div>
   );
 
@@ -243,7 +260,7 @@ export default function ProductFormPage() {
                       onChange={(e) => setFormData({...formData, countInStock: Number(e.target.value)})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-blue-400 font-bold"
                     />
-                    <p className="text-[8px] text-gray-600 uppercase font-bold leading-relaxed">
+                    <p className="text-[8px] text-gray-600 uppercase font-bold leading-relaxed mt-2">
                       Auto-updated from size inventory. Override manually if needed.
                     </p>
                  </div>

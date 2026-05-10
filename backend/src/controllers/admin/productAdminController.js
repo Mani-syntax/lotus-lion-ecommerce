@@ -1,286 +1,309 @@
-const Product = require('../../models/Product');
-const { flush, remember } = require('../../services/cacheService');
-const { uploadBuffer, uploadMultiple } = require('../../services/cloudinaryService');
+const supabase = require('../../config/supabase');
+const { flush } = require('../../services/cacheService');
+const { uploadMultiple } = require('../../../src/services/storageService');
 
-const parseMaybeJson = (value, fallback) => {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === 'string') {
-    try { return JSON.parse(value); } catch { return fallback; }
-  }
-  return value;
-};
+const mapToCamelCase = (p) => {
+  if (!p) return null;
+  
+  // Handle both joined images and fallback image_url
+  const images = (p.images?.map(img => typeof img === 'string' ? img : img.image_url) || [p.image_url]).filter(Boolean);
+  const mainImage = images[0] || null;
 
-const parseBool = (value, fallback = false) => {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === 'boolean') return value;
-  return value === 'true';
+  return {
+    _id: p.id,
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    description: p.description,
+    richDescription: p.rich_description,
+    price: p.price,
+    discountPrice: p.discount_price,
+    category: p.category,
+    collection: p.collection_id,
+    collectionType: p.collection_id,
+    countInStock: p.stock_quantity,
+    isFeatured: p.is_featured,
+    isVisible: p.is_visible,
+    isPublished: p.is_visible,
+    flashSale: p.is_flash_sale,
+    releaseDate: p.release_date || null,
+    image: mainImage,
+    images: images,
+    variants: p.variants || [],
+    sizes: (p.variants || []).reduce((acc, v) => {
+      acc[v.size] = (acc[v.size] || 0) + (v.quantity || 0);
+      return acc;
+    }, { S: 0, M: 0, L: 0, XL: 0 })
+  };
 };
 
 const slugify = (value = '') => value.toString().toLowerCase().trim()
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
-// ─── GET ALL PRODUCTS (admin, all published states) ──────────────────────────
 // @route GET /api/admin/products
 const getAdminProducts = async (req, res, next) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      search = '',
-      category = '',
-      sort = '-createdAt',
-      lowStock = false,
-      collection = '',
-      collectionType = '',
-    } = req.query;
+    const { page = 1, limit = 50, search = '', sort = 'created_at' } = req.query;
+    const from = (Number(page) - 1) * Number(limit);
+    const to = from + Number(limit) - 1;
 
-    const query = {};
-    if (search) query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { category: { $regex: search, $options: 'i' } },
-    ];
-    if (category) query.category = category;
-    if (collection) query.collectionName = collection;
-    if (collectionType) query.collectionType = collectionType;
-    if (lowStock === 'true') query.countInStock = { $gt: 0, $lt: 10 };
+    let query = supabase
+      .from('products')
+      .select('*, collection:collections(name), images:product_images(image_url), variants:product_variants(*)', { count: 'exact' });
 
-    const [products, total] = await Promise.all([
-      Product.find(query)
-        .sort(sort)
-        .skip((page - 1) * limit)
-        .limit(Number(limit)),
-      Product.countDocuments(query),
-    ]);
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    const { data, count, error } = await query
+      .order(sort.startsWith('-') ? sort.substring(1) : sort, { ascending: !sort.startsWith('-') })
+      .range(from, to);
+
+    if (error) throw error;
 
     res.json({
-      products,
+      products: data.map(mapToCamelCase),
       page: Number(page),
-      pages: Math.ceil(total / limit),
-      total,
+      pages: Math.ceil((count || 0) / limit),
+      total: count
     });
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 };
 
-// ─── GET SINGLE PRODUCT ──────────────────────────────────────────────────────
 // @route GET /api/admin/products/:id
 const getAdminProductById = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        collection:collections(*),
+        images:product_images(*),
+        variants:product_variants(*)
+      `)
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !data) {
       res.status(404);
       throw new Error('Product not found');
     }
-    res.json(product);
-  } catch (error) {
-    next(error);
-  }
+    res.json(mapToCamelCase(data));
+  } catch (error) { next(error); }
 };
 
-// ─── CREATE PRODUCT ──────────────────────────────────────────────────────────
+// Helper to resolve collection ID from slug if needed
+const resolveCollectionId = async (idOrSlug) => {
+  if (!idOrSlug) return null;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug)) {
+    return idOrSlug;
+  }
+  const { data } = await supabase.from('collections').select('id').eq('slug', idOrSlug).maybeSingle();
+  return data?.id || null;
+};
+
 // @route POST /api/admin/products
 const createProduct = async (req, res, next) => {
   try {
     const {
-      name, slug, description, richDescription, price, discountPrice, category, subcategory, collection, collectionType,
-      countInStock, sizes, isFeatured, isVisible, isPublished,
-      flashSale, releaseDate, tags, imageUrl, image: bodyImage, images: bodyImages,
-      videos, sku, colors, isTrending, isNewArrival, visibility, seo, sizeChart, hideWhenOutOfStock,
+      name, slug, description, price, category, collectionType,
+      countInStock, isFeatured, isVisible, releaseDate, discountPrice,
+      image, images, sizes
     } = req.body;
 
-    let images = parseMaybeJson(bodyImages, Array.isArray(bodyImages) ? bodyImages : []);
-    let image = imageUrl || bodyImage || images[0] || '';
+    const resolvedCollectionId = await resolveCollectionId(collectionType);
+    const productSlug = slugify(slug || name || `product-${Date.now()}`);
 
-    // Handle uploaded files
+    const { data: product, error: pError } = await supabase
+      .from('products')
+      .insert({
+        name,
+        slug: productSlug,
+        description,
+        price: !isNaN(Number(price)) ? Number(price) : 0,
+        discount_price: !isNaN(Number(discountPrice)) ? Number(discountPrice) : null,
+        category,
+        collection_id: resolvedCollectionId,
+        stock_quantity: !isNaN(Number(countInStock)) ? Number(countInStock) : 0,
+        is_featured: isFeatured === true || isFeatured === 'true',
+        is_visible: isVisible !== false && isVisible !== 'false',
+        release_date: releaseDate || new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (pError) throw pError;
+
+    // Handle images if any in req.files or req.body.images
     if (req.files && req.files.length > 0) {
-      const uploaded = await uploadMultiple(req.files.map(f => f.buffer));
-      image = uploaded[0]?.url || image;
-      images = uploaded.map(u => u.url);
+      const uploadResults = await uploadMultiple(req.files.map(f => f.buffer), `lotus-lion/products/${product.id}`);
+      const imageInserts = uploadResults.map((res, i) => ({
+        product_id: product.id,
+        image_url: res.url,
+        is_main: i === 0
+      }));
+      await supabase.from('product_images').insert(imageInserts);
+    } else if (images && Array.isArray(images) && images.length > 0) {
+      const imageInserts = images.map((img, i) => ({
+        product_id: product.id,
+        image_url: typeof img === 'string' ? img : (img.image_url || img.url),
+        is_main: i === 0
+      })).filter(img => img.image_url);
+      await supabase.from('product_images').insert(imageInserts);
     }
 
-    const product = await Product.create({
-      name: name || 'New Product',
-      slug: slugify(slug || name || `product-${Date.now()}`),
-      description: description || '',
-      richDescription: richDescription || '',
-      price: Number(price) || 0,
-      discountPrice: Number(discountPrice) || 0,
-      category: category || 'Uncategorized',
-      subcategory: subcategory || '',
-      collectionName: collection || 'lotus',
-      collectionType: collectionType || 'lotus',
-      countInStock: Number(countInStock) || 0,
-      sizes: parseMaybeJson(sizes, {}),
-      colors: parseMaybeJson(colors, []),
-      isFeatured: parseBool(isFeatured, false),
-      isTrending: parseBool(isTrending, false),
-      isNewArrival: parseBool(isNewArrival, false),
-      isVisible: isVisible !== 'false',
-      isPublished: isPublished !== 'false',
-      visibility: visibility || (isVisible === 'false' ? 'hidden' : 'visible'),
-      flashSale: parseBool(flashSale, false),
-      releaseDate: releaseDate || null,
-      tags: parseMaybeJson(tags, []),
-      videos: parseMaybeJson(videos, []),
-      sku,
-      seo: parseMaybeJson(seo, {}),
-      sizeChart: sizeChart || '',
-      hideWhenOutOfStock: parseBool(hideWhenOutOfStock, true),
-      image,
-      images,
-      brand: 'Lotus & Lion',
-    });
+    // Handle sizes/variants
+    if (sizes) {
+      const variantInserts = Object.entries(sizes)
+        .filter(([_, qty]) => Number(qty) > 0)
+        .map(([size, qty]) => ({
+          product_id: product.id,
+          size,
+          quantity: Number(qty),
+          color: 'Default'
+        }));
+      if (variantInserts.length > 0) {
+        await supabase.from('product_variants').insert(variantInserts);
+      }
+    }
 
     await flush('products:*');
-    res.status(201).json(product);
-  } catch (error) {
-    next(error);
-  }
+    await flush('products:list:*');
+    await flush('products:featured:*');
+
+    // Re-fetch full product with images
+    const { data: fullProduct } = await supabase
+      .from('products')
+      .select('id, name, slug, price, discount_price, category, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url), variants:product_variants(*)')
+      .eq('id', product.id)
+      .single();
+
+    res.status(201).json(mapToCamelCase(fullProduct || product));
+  } catch (error) { next(error); }
 };
 
-// ─── UPDATE PRODUCT ──────────────────────────────────────────────────────────
 // @route PUT /api/admin/products/:id
 const updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found');
-    }
-
     const {
-      name, slug, description, richDescription, price, discountPrice, category, subcategory, collection, collectionType,
-      countInStock, sizes, isFeatured, isVisible, isPublished,
-      flashSale, releaseDate, tags, imageUrl, image: bodyImage, images: bodyImages, existingImages,
-      videos, sku, colors, isTrending, isNewArrival, visibility, seo, sizeChart, hideWhenOutOfStock,
+      name, slug, description, price, category, collectionType,
+      countInStock, isFeatured, isVisible, releaseDate, discountPrice,
+      image, images, sizes
     } = req.body;
 
-    let image = product.image;
-    let images = product.images || [];
+    const resolvedCollectionId = await resolveCollectionId(collectionType);
 
-    // Handle new file uploads
-    if (req.files && req.files.length > 0) {
-      const uploaded = await uploadMultiple(req.files.map(f => f.buffer));
-      image = uploaded[0]?.url || image;
-      // Merge new uploads with kept existing images
-      const kept = parseMaybeJson(existingImages, []);
-      images = [...kept, ...uploaded.map(u => u.url)];
-    } else {
-      images = parseMaybeJson(bodyImages, images);
-      image = imageUrl || bodyImage || images[0] || image;
+    const { data: product, error: pError } = await supabase
+      .from('products')
+      .update({
+        name,
+        description,
+        price: !isNaN(Number(price)) ? Number(price) : undefined,
+        discount_price: !isNaN(Number(discountPrice)) ? Number(discountPrice) : null,
+        category,
+        collection_id: resolvedCollectionId || undefined,
+        stock_quantity: !isNaN(Number(countInStock)) ? Number(countInStock) : undefined,
+        is_featured: isFeatured !== undefined ? (isFeatured === true || isFeatured === 'true') : undefined,
+        is_visible: isVisible !== undefined ? (isVisible !== false && isVisible !== 'false') : undefined,
+        release_date: releaseDate || undefined
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (pError) throw pError;
+    
+    // Sync images if provided
+    if (images && Array.isArray(images)) {
+      // Clear existing images first
+      await supabase.from('product_images').delete().eq('product_id', req.params.id);
+      
+      // Insert new ones
+      const imageInserts = images.map((img, i) => ({
+        product_id: req.params.id,
+        image_url: typeof img === 'string' ? img : (img.image_url || img.url),
+        is_main: i === 0
+      })).filter(img => img.image_url);
+      if (imageInserts.length > 0) {
+        await supabase.from('product_images').insert(imageInserts);
+      }
     }
 
-    product.name = name || product.name;
-    product.slug = slug !== undefined ? slugify(slug || product.name) : (product.slug || slugify(product.name));
-    product.description = description || product.description;
-    product.richDescription = richDescription !== undefined ? richDescription : product.richDescription;
-    product.price = price !== undefined ? Number(price) : product.price;
-    product.discountPrice = discountPrice !== undefined ? Number(discountPrice) : product.discountPrice;
-    product.category = category || product.category;
-    product.subcategory = subcategory !== undefined ? subcategory : product.subcategory;
-    product.collectionName = collection || product.collectionName;
-    product.collectionType = collectionType || product.collectionType;
-    product.countInStock = countInStock !== undefined ? Number(countInStock) : product.countInStock;
-    product.sizes = sizes !== undefined ? parseMaybeJson(sizes, product.sizes) : product.sizes;
-    product.colors = colors !== undefined ? parseMaybeJson(colors, product.colors) : product.colors;
-    product.isFeatured = isFeatured !== undefined ? parseBool(isFeatured, product.isFeatured) : product.isFeatured;
-    product.isTrending = isTrending !== undefined ? parseBool(isTrending, product.isTrending) : product.isTrending;
-    product.isNewArrival = isNewArrival !== undefined ? parseBool(isNewArrival, product.isNewArrival) : product.isNewArrival;
-    product.isVisible = isVisible !== undefined ? isVisible !== 'false' : product.isVisible;
-    product.isPublished = isPublished !== undefined ? isPublished !== 'false' : product.isPublished;
-    product.visibility = visibility || (product.isVisible ? 'visible' : 'hidden');
-    product.flashSale = flashSale !== undefined ? parseBool(flashSale, product.flashSale) : product.flashSale;
-    product.releaseDate = releaseDate || product.releaseDate;
-    product.tags = tags !== undefined ? parseMaybeJson(tags, product.tags) : product.tags;
-    product.videos = videos !== undefined ? parseMaybeJson(videos, product.videos) : product.videos;
-    product.sku = sku !== undefined ? sku : product.sku;
-    product.seo = seo !== undefined ? parseMaybeJson(seo, product.seo) : product.seo;
-    product.sizeChart = sizeChart !== undefined ? sizeChart : product.sizeChart;
-    product.hideWhenOutOfStock = hideWhenOutOfStock !== undefined ? parseBool(hideWhenOutOfStock, product.hideWhenOutOfStock) : product.hideWhenOutOfStock;
-    product.image = image;
-    product.images = images;
+    // Sync sizes/variants
+    if (sizes) {
+      await supabase.from('product_variants').delete().eq('product_id', req.params.id);
+      const variantInserts = Object.entries(sizes)
+        .filter(([_, qty]) => Number(qty) > 0)
+        .map(([size, qty]) => ({
+          product_id: req.params.id,
+          size,
+          quantity: Number(qty),
+          color: 'Default'
+        }));
+      if (variantInserts.length > 0) {
+        await supabase.from('product_variants').insert(variantInserts);
+      }
+    }
 
-    const updated = await product.save();
     await flush('products:*');
-    res.json(updated);
-  } catch (error) {
-    next(error);
-  }
+    await flush('products:list:*');
+    await flush('products:featured:*');
+    if (product?.slug) {
+      await flush(`product:slug:${product.slug}`);
+    }
+
+    // Re-fetch the full product with images so the response is accurate
+    const { data: fullProduct } = await supabase
+      .from('products')
+      .select('id, name, slug, price, discount_price, category, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url), variants:product_variants(*)')
+      .eq('id', req.params.id)
+      .single();
+
+    res.json(mapToCamelCase(fullProduct || product));
+  } catch (error) { next(error); }
 };
 
-// ─── DELETE PRODUCT ──────────────────────────────────────────────────────────
 // @route DELETE /api/admin/products/:id
 const deleteProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      res.status(404);
-      throw new Error('Product not found');
-    }
-    await Product.deleteOne({ _id: product._id });
+    const { error } = await supabase.from('products').delete().eq('id', req.params.id);
+    if (error) throw error;
     await flush('products:*');
     res.json({ message: 'Product removed' });
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 };
 
-// ─── TOGGLE FEATURED ─────────────────────────────────────────────────────────
 // @route PATCH /api/admin/products/:id/featured
 const toggleFeatured = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) { res.status(404); throw new Error('Product not found'); }
-    product.isFeatured = !product.isFeatured;
-    await product.save();
-    await flush('products:*');
-    res.json({ isFeatured: product.isFeatured });
-  } catch (error) {
-    next(error);
-  }
+    const { data: current } = await supabase.from('products').select('is_featured, slug').eq('id', req.params.id).single();
+    const { data, error } = await supabase.from('products').update({ is_featured: !current.is_featured }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    
+    // Invalidate specific caches
+    await flush('products:featured:*');
+    await flush(`product:slug:${current.slug}`);
+    await flush('products:list:*');
+    
+    res.json(mapToCamelCase(data));
+  } catch (error) { next(error); }
 };
 
-// ─── TOGGLE VISIBILITY ────────────────────────────────────────────────────────
 // @route PATCH /api/admin/products/:id/visibility
 const toggleVisibility = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) { res.status(404); throw new Error('Product not found'); }
-    product.isVisible = !product.isVisible;
-    product.isPublished = product.isVisible;
-    await product.save();
-    await flush('products:*');
-    res.json({ isVisible: product.isVisible });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ─── APPLY GLOBAL DISCOUNT ────────────────────────────────────────────────────
-// @route POST /api/admin/products/bulk-discount
-const applyBulkDiscount = async (req, res, next) => {
-  try {
-    const { percentage, category } = req.body;
-    if (!percentage || percentage < 0 || percentage > 100) {
-      res.status(400);
-      throw new Error('Invalid discount percentage');
-    }
-
-    const query = category ? { category } : {};
-    const products = await Product.find(query);
-
-    await Promise.all(products.map(p => {
-      p.discountPrice = parseFloat((p.price * (1 - percentage / 100)).toFixed(2));
-      return p.save();
-    }));
-
-    await flush('products:*');
-    res.json({ message: `Discount of ${percentage}% applied to ${products.length} products` });
-  } catch (error) {
-    next(error);
-  }
+    const { data: current } = await supabase.from('products').select('is_visible, slug').eq('id', req.params.id).single();
+    const { data, error } = await supabase.from('products').update({ is_visible: !current.is_visible }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    
+    // Invalidate specific caches
+    await flush('products:featured:*');
+    await flush(`product:slug:${current.slug}`);
+    await flush('products:list:*');
+    
+    res.json(mapToCamelCase(data));
+  } catch (error) { next(error); }
 };
 
 module.exports = {
@@ -291,5 +314,5 @@ module.exports = {
   deleteProduct,
   toggleFeatured,
   toggleVisibility,
-  applyBulkDiscount,
+  applyBulkDiscount: async (req, res) => res.status(501).json({ message: 'Not implemented' })
 };

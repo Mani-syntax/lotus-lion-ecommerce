@@ -65,7 +65,7 @@ export default function ControlCenterPage() {
           </div>
           <div className="space-y-3">
             {(data?.announcements || []).map((item: any) => (
-              <div key={item._id} className="border border-white/10 bg-white/5 p-4">
+              <div key={item.id} className="border border-white/10 bg-white/5 p-4">
                 <p className="text-sm text-white">{item.message}</p>
                 <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-[#777]">{item.placement}</p>
               </div>

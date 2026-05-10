@@ -35,9 +35,9 @@ const DEFAULT_SETTINGS: Record<string, { value: any; label: string; description:
     description: 'Configure checkout shipping rules.',
   },
   siteMeta: {
-    value: { name: 'Lotus & Lion', tagline: 'Luxury essentials for the modern pioneer.' },
-    label: 'Site Identity',
-    description: 'Store name and tagline used across the site.',
+    value: { name: 'Lotus & Lion', tagline: 'Luxury essentials for the modern pioneer.', whatsapp: '', instagram: '', twitter: '', pinterest: '' },
+    label: 'Site Identity & Socials',
+    description: 'Store name, contact details, and social media links.',
   },
   maintenanceMode: {
     value: { enabled: false },
@@ -70,6 +70,8 @@ export default function AdminSettings() {
         updates[key] = localSettings[key].value;
       });
 
+      // Special handling for nested siteMeta to flat DB columns if needed
+      // But the backend /admin/settings handles mapping
       await api.put('/admin/settings', updates);
       toast.success('Global settings synced');
       refresh();
@@ -263,6 +265,57 @@ export default function AdminSettings() {
                       disabled={!isSuperAdmin}
                     />
                  </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-gray-500">WhatsApp Support Number</label>
+                    <input 
+                      type="text" 
+                      value={localSettings.siteMeta?.value?.whatsapp ?? ''}
+                      onChange={(e) => updateValue('siteMeta', { ...localSettings.siteMeta.value, whatsapp: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-[#25D366] font-bold"
+                      placeholder="e.g. 919876543210"
+                      disabled={!isSuperAdmin}
+                    />
+                    <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">Include country code without + (e.g. 91 for India)</p>
+                  </div>
+                  
+                  <div className="pt-6 border-t border-white/5 space-y-4">
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white">Social Media Channels</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-400">Instagram</label>
+                        <input 
+                          type="text" 
+                          value={localSettings.siteMeta?.value?.instagram ?? ''}
+                          onChange={(e) => updateValue('siteMeta', { ...localSettings.siteMeta.value, instagram: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-[10px] focus:border-primary outline-none"
+                          placeholder="https://instagram.com/..."
+                          disabled={!isSuperAdmin}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-400">Twitter (X)</label>
+                        <input 
+                          type="text" 
+                          value={localSettings.siteMeta?.value?.twitter ?? ''}
+                          onChange={(e) => updateValue('siteMeta', { ...localSettings.siteMeta.value, twitter: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-[10px] focus:border-primary outline-none"
+                          placeholder="https://twitter.com/..."
+                          disabled={!isSuperAdmin}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-400">Pinterest</label>
+                        <input 
+                          type="text" 
+                          value={localSettings.siteMeta?.value?.pinterest ?? ''}
+                          onChange={(e) => updateValue('siteMeta', { ...localSettings.siteMeta.value, pinterest: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-[10px] focus:border-primary outline-none"
+                          placeholder="https://pinterest.com/..."
+                          disabled={!isSuperAdmin}
+                        />
+                      </div>
+                    </div>
+                  </div>
               </div>
            </section>
 

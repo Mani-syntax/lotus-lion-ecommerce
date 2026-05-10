@@ -36,25 +36,37 @@ export const useStore = create<StoreState>()(
       cartItems: [],
       addToCart: (item) =>
         set((state) => {
-          const existItem = state.cartItems.find((x) => x.product === item.product);
+          const cartItems = Array.isArray(state.cartItems) ? state.cartItems : [];
+          const existItem = cartItems.find((x) => x.product === item.product);
           if (existItem) {
             return {
-              cartItems: state.cartItems.map((x) =>
+              cartItems: cartItems.map((x) =>
                 x.product === existItem.product ? item : x
               ),
             };
           } else {
-            return { cartItems: [...state.cartItems, item] };
+            return { cartItems: [...cartItems, item] };
           }
         }),
       removeFromCart: (id) =>
-        set((state) => ({
-          cartItems: state.cartItems.filter((x) => x.product !== id),
-        })),
+        set((state) => {
+          const cartItems = Array.isArray(state.cartItems) ? state.cartItems : [];
+          return {
+            cartItems: cartItems.filter((x) => x.product !== id),
+          };
+        }),
       clearCart: () => set({ cartItems: [] }),
     }),
     {
       name: 'lotus-lion-storage',
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<StoreState> | undefined;
+        return {
+          ...currentState,
+          ...persisted,
+          cartItems: Array.isArray(persisted?.cartItems) ? persisted.cartItems : [],
+        };
+      },
     }
   )
 );

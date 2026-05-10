@@ -7,27 +7,26 @@ import { useStore } from '@/store/useStore';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
-const fallbackNav = [
-  { label: 'New Arrivals', href: '/products?category=New Arrivals' },
-  { label: 'Mens', href: '/products?category=Mens' },
-  { label: 'Womens', href: '/products?category=Womens' },
-  { label: 'Essentials', href: '/products?category=Essentials' },
-  { label: 'Heritage', href: '/heritage' },
-  { label: 'Accessories', href: '/products?category=Accessories' },
-  { label: 'Sale', href: '/products?sale=true' },
+const navLinks = [
+  { label: 'WOMEN', href: '/collections/lotus' },
+  { label: 'MEN', href: '/collections/lion' },
+  { label: 'THE SUMMER EDIT', href: '/collections/summer' },
+  { label: 'SALE / BEST SELLER', href: '/collections/sale' },
+  { label: 'ABOUT', href: '/about' },
 ];
 
 const Navbar = () => {
   const { userInfo, setUserInfo, cartItems } = useStore();
+  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   const [isOpen, setIsOpen] = useState(false);
-  const [navItems, setNavItems] = useState<any[]>(fallbackNav);
+  const [navItems, setNavItems] = useState<any[]>(navLinks);
   const [announcement, setAnnouncement] = useState<any>(null);
 
   useEffect(() => {
+    // Force use of the requested navLinks
+    setNavItems(navLinks);
+    
     api.get('/cms/site').then(({ data }) => {
-      if (Array.isArray(data.navbar) && data.navbar.length) {
-        setNavItems(data.navbar.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
-      }
       const topBar = data.announcements?.find?.((item: any) => item.placement === 'top-bar') || data.announcements?.[0];
       setAnnouncement(topBar || null);
     }).catch(() => undefined);
@@ -45,7 +44,7 @@ const Navbar = () => {
     }
   };
 
-  const cartCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
+  const cartCount = safeCartItems.reduce((acc, item) => acc + (Number(item.qty) || 0), 0);
   const isAdmin = userInfo?.role === 'admin' || userInfo?.role === 'super-admin' || userInfo?.isAdmin;
 
   return (
@@ -56,64 +55,73 @@ const Navbar = () => {
         </div>
       )}
       <div className="border-b border-[#dddddd]">
-        <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-4 sm:px-8">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] md:hidden"
-            aria-label="Open menu"
-          >
-            <Menu size={20} /> Menu
-          </button>
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-8">
+          <div className="grid grid-cols-3 items-center h-20">
+            {/* Left Section: Menu */}
+            <div className="flex items-center">
+              <button
+                onClick={() => setIsOpen(true)}
+                className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu size={20} /> <span className="hidden xs:inline">Menu</span>
+              </button>
 
-          <nav className="hidden items-center gap-7 md:flex">
-            {navItems.slice(0, 2).map((item) => (
-              <Link key={`primary-${item.label}`} href={item.href} className="text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:text-[#df0029]">
-                {item.label === 'Heritage' && <Flower2 size={14} className="inline -mt-0.5 mr-2" />}
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <Link href="/" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 sm:gap-3 text-center">
-            <span className="lotus-symbol hidden sm:inline-grid" aria-hidden="true"><Flower2 /></span>
-            <span className="brand-heading block text-lg sm:text-2xl uppercase whitespace-nowrap">Lotus & Lion</span>
-            <span className="lion-symbol hidden sm:inline-grid" aria-hidden="true"><Crown /></span>
-          </Link>
-
-          <div className="flex items-center gap-5">
-            <Link href="/products" aria-label="Search">
-              <Search size={19} />
-            </Link>
-            <Link href="/wishlist" aria-label="Wishlist" className="hidden sm:block">
-              <Heart size={19} />
-            </Link>
-            {userInfo ? (
-              <>
-                {isAdmin && (
-                  <Link href="/admin" aria-label="Admin portal">
-                    <Shield size={19} />
+              <nav className="hidden items-center gap-7 md:flex">
+                {navItems.slice(0, 2).map((item) => (
+                  <Link key={`primary-${item.label}`} href={item.href} className="text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:text-[#df0029]">
+                    {item.label === 'Heritage' && <Flower2 size={14} className="inline -mt-0.5 mr-2" />}
+                    {item.label}
                   </Link>
-                )}
-                <Link href="/dashboard" aria-label="Account">
+                ))}
+              </nav>
+            </div>
+
+            {/* Center Section: Logo */}
+            <div className="flex justify-center">
+              <Link href="/" className="flex items-center gap-2 sm:gap-3 text-center">
+                <span className="lotus-symbol hidden md:inline-grid" aria-hidden="true"><Flower2 /></span>
+                <span className="brand-heading block text-base sm:text-2xl uppercase whitespace-nowrap">Lotus & Lion</span>
+                <span className="lion-symbol hidden md:inline-grid" aria-hidden="true"><Crown /></span>
+              </Link>
+            </div>
+
+            {/* Right Section: Icons */}
+            <div className="flex items-center justify-end gap-3 sm:gap-5">
+              <Link href="/products" aria-label="Search" className="hidden xs:block">
+                <Search size={19} />
+              </Link>
+              <Link href="/wishlist" aria-label="Wishlist" className="hidden sm:block">
+                <Heart size={19} />
+              </Link>
+              {userInfo ? (
+                <>
+                  {isAdmin && (
+                    <Link href="/admin" aria-label="Admin portal" className="hidden xs:block">
+                      <Shield size={19} />
+                    </Link>
+                  )}
+                  <Link href={isAdmin ? "/admin" : "/"} aria-label="Account">
+                    <User size={19} className={isAdmin ? "text-primary" : ""} />
+                  </Link>
+                  <button onClick={logoutHandler} aria-label="Logout" className="hidden sm:block">
+                    <LogOut size={19} />
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" aria-label="Account">
                   <User size={19} />
                 </Link>
-                <button onClick={logoutHandler} aria-label="Logout">
-                  <LogOut size={19} />
-                </button>
-              </>
-            ) : (
-              <Link href="/login" aria-label="Account">
-                <User size={19} />
-              </Link>
-            )}
-            <Link href="/cart" className="relative" aria-label="Cart">
-              <ShoppingBag size={20} />
-              {cartCount > 0 && (
-                <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center bg-[#df0029] px-1 text-[9px] font-bold text-white">
-                  {cartCount}
-                </span>
               )}
-            </Link>
+              <Link href="/cart" className="relative" aria-label="Cart">
+                <ShoppingBag size={20} />
+                {cartCount > 0 && (
+                  <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center bg-[#df0029] px-1 text-[9px] font-bold text-white">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            </div>
           </div>
         </div>
       </div>

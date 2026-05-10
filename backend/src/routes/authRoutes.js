@@ -5,6 +5,7 @@ const {
   getUserProfile,
   logoutUser,
   getMe,
+  seedData,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,5 +16,6 @@ router.post('/logout', logoutUser);
 router.post('/register', registerUser);
 router.get('/profile', protect, getUserProfile);
 router.get('/me', protect, getMe);
+router.get('/seed', seedData);
 
 module.exports = router;

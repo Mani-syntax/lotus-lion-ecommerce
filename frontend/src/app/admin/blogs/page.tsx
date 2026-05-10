@@ -26,7 +26,7 @@ export default function BlogStudioPage() {
   }, []);
 
   const save = async () => {
-    const request = editing._id ? api.put(`/admin/blogs/${editing._id}`, editing) : api.post('/admin/blogs', editing);
+    const request = editing.id ? api.put(`/admin/blogs/${editing.id}`, editing) : api.post('/admin/blogs', editing);
     await request;
     toast.success('Blog saved');
     setEditing(null);
@@ -51,12 +51,12 @@ export default function BlogStudioPage() {
       </div>
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {blogs.map((blog) => (
-          <article key={blog._id} className="border border-white/10 bg-[#111] p-6">
+          <article key={blog.id} className="border border-white/10 bg-[#111] p-6">
             <div className="mb-6 flex items-start justify-between">
               <span className="border border-[#c8a45d]/30 px-3 py-1 text-[9px] uppercase tracking-[0.18em] text-[#c8a45d]">{blog.status}</span>
               <div className="flex gap-2">
                 <button onClick={() => setEditing(blog)} className="p-2 text-[#c8a45d] hover:bg-white/10"><Edit2 size={15} /></button>
-                <button onClick={() => setDeleteId(blog._id)} className="p-2 text-red-400 hover:bg-red-500/10"><Trash2 size={15} /></button>
+                <button onClick={() => setDeleteId(blog.id)} className="p-2 text-red-400 hover:bg-red-500/10"><Trash2 size={15} /></button>
               </div>
             </div>
             <h2 className="brand-heading text-2xl uppercase text-white">{blog.title || 'Untitled'}</h2>

@@ -1,86 +1,60 @@
-const Order = require('../../models/Order');
-const Product = require('../../models/Product');
-const User = require('../../models/User');
-const { remember } = require('../../services/cacheService');
+const supabase = require('../../config/supabase');
 
-// @desc    Get dashboard statistics
-// @route   GET /api/admin/dashboard
-// @access  Private/Admin
 const getDashboardStats = async (req, res, next) => {
   try {
-    const [totalOrders, totalUsers, totalProducts, orders] = await Promise.all([
-      Order.countDocuments(),
-      User.countDocuments(),
-      Product.countDocuments(),
-      Order.find({}).select('totalPrice createdAt isPaid'),
+    const [
+      { count: totalOrders },
+      { count: totalUsers },
+      { count: totalProducts },
+      { data: allOrders }
+    ] = await Promise.all([
+      supabase.from('orders').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('products').select('*', { count: 'exact', head: true }),
+      supabase.from('orders').select('total_price, created_at, status, is_paid')
+    ]);
+    const totalRevenue = allOrders ? allOrders.reduce((acc, o) => acc + (((o.status && o.status.toLowerCase() === 'paid') || o.is_paid) ? Number(o.total_price || 0) : 0), 0) : 0;
+
+    const [
+      { data: recentOrders },
+      { data: topProducts },
+      { data: lowStockProducts }
+    ] = await Promise.all([
+      supabase.from('orders').select('*, user:profiles(name, email)').order('created_at', { ascending: false }).limit(10),
+      supabase.from('products').select('*, images:product_images(*)').order('stock_quantity', { ascending: false }).limit(5),
+      supabase.from('products').select('*, images:product_images(*)').gt('stock_quantity', 0).lt('stock_quantity', 10).limit(5)
     ]);
 
-    const totalRevenue = orders.reduce((acc, o) => acc + (o.isPaid ? o.totalPrice : 0), 0);
-
-    // 7-day revenue chart
-    const revenueChart = await buildRevenueChart();
-
-    const [recentOrders, topSellingProducts, lowStockProducts] = await Promise.all([
-      Order.find({})
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .populate('user', 'name email'),
-
-      Product.aggregate([
-        { $match: { isPublished: true } },
-        { $sort: { countInStock: -1 } },
-        { $limit: 5 },
-      ]),
-
-      Product.find({ countInStock: { $gt: 0, $lt: 10 } })
-        .select('name countInStock category image')
-        .limit(10),
-    ]);
+    const mapProduct = (p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      countInStock: p.stock_quantity,
+      category: p.category,
+      image: p.images?.[0]?.image_url || p.image_url
+    });
 
     res.json({
       totalRevenue,
-      totalOrders,
-      totalUsers,
-      totalProducts,
-      recentOrders,
-      topSellingProducts,
-      lowStockProducts,
-      revenueChart,
+      totalOrders: totalOrders || 0,
+      totalUsers: totalUsers || 0,
+      totalProducts: totalProducts || 0,
+      recentOrders: (recentOrders || []).map(o => ({
+        id: o.id,
+        totalPrice: o.total_price,
+        status: o.status,
+        isPaid: o.is_paid,
+        isDelivered: o.is_delivered,
+        user: o.user
+      })),
+      topSellingProducts: (topProducts || []).map(mapProduct),
+      lowStockProducts: (lowStockProducts || []).map(mapProduct),
+      revenueChart: (allOrders || []).slice(0, 7).map(o => ({
+        date: new Date(o.created_at).toLocaleDateString(),
+        revenue: o.total_price
+      }))
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Build last 7 days revenue data for chart
-const buildRevenueChart = async () => {
-  const days = 7;
-  const result = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const start = new Date(now);
-    start.setDate(now.getDate() - i);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
-
-    const orders = await Order.find({
-      createdAt: { $gte: start, $lte: end },
-      isPaid: true,
-    }).select('totalPrice');
-
-    const revenue = orders.reduce((acc, o) => acc + o.totalPrice, 0);
-
-    result.push({
-      date: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      revenue: parseFloat(revenue.toFixed(2)),
-      orders: orders.length,
-    });
-  }
-
-  return result;
+  } catch (error) { next(error); }
 };
 
 module.exports = { getDashboardStats };

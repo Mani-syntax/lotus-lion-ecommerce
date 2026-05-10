@@ -9,6 +9,7 @@ import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 interface Product {
   _id: string;
   name: string;
+  slug: string;
   price: number;
   discountPrice?: number;
   image: string;
@@ -77,7 +78,7 @@ function ProductsContent() {
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
             {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}

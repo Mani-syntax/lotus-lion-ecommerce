@@ -97,14 +97,14 @@ export default function AdminProducts() {
       accessor: (item: any) => (
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => toggleFeatured(item._id)}
+            onClick={() => toggleFeatured(item.id)}
             className={`p-1.5 rounded-lg transition-colors ${item.isFeatured ? 'bg-yellow-500/10 text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
             title="Toggle Featured"
           >
             <Star size={14} fill={item.isFeatured ? 'currentColor' : 'none'} />
           </button>
           <button 
-            onClick={() => toggleVisibility(item._id)}
+            onClick={() => toggleVisibility(item.id)}
             className={`p-1.5 rounded-lg transition-colors ${item.isVisible ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}
             title="Toggle Visibility"
           >
@@ -119,13 +119,13 @@ export default function AdminProducts() {
       accessor: (item: any) => (
         <div className="flex items-center justify-end gap-2">
           <Link 
-            href={`/admin/products/${item._id}`}
+            href={`/admin/products/${item.id}`}
             className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
           >
             <Edit2 size={14} />
           </Link>
           <button 
-            onClick={() => setIsDeleting(item._id)}
+            onClick={() => setIsDeleting(item.id)}
             className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
           >
             <Trash2 size={14} />

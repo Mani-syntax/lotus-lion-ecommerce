@@ -33,8 +33,8 @@ router.get('/control-center', protect, admin, getControlCenter);
 // ─── Products ────────────────────────────────────────────────────────────────
 router.get('/products', protect, admin, getAdminProducts);
 router.get('/products/:id', protect, admin, getAdminProductById);
-router.post('/products', protect, admin, uploadFields, createProduct);
-router.put('/products/:id', protect, admin, uploadFields, updateProduct);
+router.post('/products', protect, admin, createProduct);
+router.put('/products/:id', protect, admin, updateProduct);
 router.delete('/products/:id', protect, admin, deleteProduct);
 router.patch('/products/:id/featured', protect, admin, toggleFeatured);
 router.patch('/products/:id/visibility', protect, admin, toggleVisibility);

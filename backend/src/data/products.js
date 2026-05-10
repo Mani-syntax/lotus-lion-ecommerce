@@ -7,6 +7,8 @@ const products = [
     category: 'T-Shirts',
     price: 49.99,
     countInStock: 100,
+    isVisible: true,
+    createdAt: new Date(),
   },
   {
     name: 'White Linen Shirt',
@@ -16,6 +18,8 @@ const products = [
     category: 'Shirts',
     price: 89.99,
     countInStock: 50,
+    isVisible: true,
+    createdAt: new Date(),
   },
   {
     name: 'Gold Emblem Hoodie',
@@ -25,6 +29,8 @@ const products = [
     category: 'Hoodies',
     price: 129.99,
     countInStock: 30,
+    isVisible: true,
+    createdAt: new Date(),
   },
 ];
 

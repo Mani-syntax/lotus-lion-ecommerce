@@ -8,16 +8,21 @@ import api from '@/lib/api';
 
 const footerGroups = [
   {
-    title: 'Collections',
-    links: ['Lotus Collections', 'Lion Collections', 'Artist Outfits', 'Co-ord Sets', 'Studio Dresses', 'Gallery Layers', 'All Collections'],
+    heading: 'COMPANY',
+    links: [
+      { label: 'Our story', href: '/about' },
+      { label: 'Contact US', href: '/contact' },
+      { label: 'Bulk Orders', href: '/bulk-orders' }
+    ]
   },
   {
-    title: 'Useful Links',
-    links: ['Track Your Order', 'Shipping Policy', 'Return & Exchange Policy', 'Privacy Policy', 'About Us', 'Contact Us', 'FAQs'],
-  },
-  {
-    title: 'Payment Options',
-    links: ['VISA', 'MASTER CARD', 'NETBANKING', 'ALL CREDIT/DEBIT CARDS', 'UPI & WALLETS', 'COD'],
+    heading: 'SUPPORT',
+    links: [
+      { label: 'Return Cancel & Refund policy', href: '/refund-policy' },
+      { label: 'Track your order', href: '/track-order' },
+      { label: 'Shipping Policy', href: '/shipping-policy' },
+      { label: 'Terms of Service', href: '/terms' }
+    ]
   },
 ];
 
@@ -25,11 +30,13 @@ const Footer = () => {
   const [email, setEmail] = useState('');
   const [cmsFooter, setCmsFooter] = useState<any[] | null>(null);
   const [theme, setTheme] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
     api.get('/cms/site').then(({ data }) => {
       if (Array.isArray(data.footer) && data.footer.length) setCmsFooter(data.footer);
       if (data.theme) setTheme(data.theme);
+      if (data.settings) setSettings(data.settings);
     }).catch(() => undefined);
   }, []);
 
@@ -70,11 +77,11 @@ const Footer = () => {
       </div>
 
       <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-12 sm:px-8 md:grid-cols-3">
-        {(cmsFooter || footerGroups).map((group: any) => (
+        {footerGroups.map((group: any) => (
           <div key={group.heading || group.title}>
             <h4 className="mb-5 text-[13px] uppercase tracking-[0.18em]">{group.heading || group.title}</h4>
             <ul className="space-y-3">
-              {group.links.map((link: any) => (
+              {(Array.isArray(group.links) ? group.links : []).map((link: any) => (
                 <li key={link.label || link}>
                   <Link href={link.href || '/products'} className="text-sm text-[#555] hover:text-[#df0029]">
                     {link.label || link}
@@ -90,9 +97,9 @@ const Footer = () => {
         <div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-3 text-[12px] text-[#666] md:flex-row md:items-center">
           <p>© 2026 - LOTUS & LION - Original Atelier Storefront</p>
           <div className="flex gap-5">
-            <Link href="https://instagram.com" target="_blank" className="hover:text-[#df0029]">Instagram</Link>
-            <Link href="https://x.com" target="_blank" className="hover:text-[#df0029]">Twitter</Link>
-            <Link href="https://pinterest.com" target="_blank" className="hover:text-[#df0029]">Pinterest</Link>
+            <Link href={settings?.instagram_url || "https://instagram.com"} target="_blank" className="hover:text-[#df0029]">Instagram</Link>
+            <Link href={settings?.twitter_url || "https://twitter.com"} target="_blank" className="hover:text-[#df0029]">Twitter</Link>
+            <Link href={settings?.pinterest_url || "https://pinterest.com"} target="_blank" className="hover:text-[#df0029]">Pinterest</Link>
           </div>
         </div>
       </div>

@@ -60,7 +60,7 @@ export default function DataTable<T extends { _id: string }>({
           <tbody className="divide-y divide-white/5">
             {data.map((item) => (
               <tr 
-                key={item._id} 
+                key={item.id} 
                 onClick={() => onRowClick?.(item)}
                 className={`transition-colors ${onRowClick ? 'cursor-pointer hover:bg-white/5' : ''}`}
               >

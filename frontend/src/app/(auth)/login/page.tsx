@@ -61,7 +61,9 @@ function LoginContent() {
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-widest mb-2">Email Address</label>
             <input
-              type="email"
+              type="text"
+              inputMode="email"
+              autoComplete="username"
               required
               className="w-full bg-transparent border border-border px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors tracking-wide"
               value={email}
@@ -80,8 +82,7 @@ function LoginContent() {
           </div>
 
           <button
-            type="button"
-            onClick={submitHandler}
+            type="submit"
             disabled={loading}
             className="w-full bg-black dark:bg-white text-white dark:text-black py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary dark:hover:bg-primary transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >

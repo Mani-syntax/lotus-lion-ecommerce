@@ -2,12 +2,21 @@ const { getRedisClient, getIsRedisConnected } = require('../config/redis');
 const logger = require('../utils/logger');
 
 const DEFAULT_TTL = 300; // 5 minutes
+const memoryCache = new Map();
+const memoryExpiry = new Map();
 
 /**
  * Get a cached value. Returns null if not cached or Redis unavailable.
  */
 const get = async (key) => {
-  if (!getIsRedisConnected()) return null;
+  if (!getIsRedisConnected()) {
+    // Memory fallback
+    const expiry = memoryExpiry.get(key);
+    if (expiry && expiry > Date.now()) {
+      return memoryCache.get(key);
+    }
+    return null;
+  }
   try {
     const client = getRedisClient();
     const value = await client.get(key);
@@ -22,7 +31,12 @@ const get = async (key) => {
  * Set a cached value with optional TTL (seconds).
  */
 const set = async (key, value, ttl = DEFAULT_TTL) => {
-  if (!getIsRedisConnected()) return;
+  if (!getIsRedisConnected()) {
+    // Memory fallback
+    memoryCache.set(key, value);
+    memoryExpiry.set(key, Date.now() + ttl * 1000);
+    return;
+  }
   try {
     const client = getRedisClient();
     await client.setex(key, ttl, JSON.stringify(value));
@@ -35,6 +49,8 @@ const set = async (key, value, ttl = DEFAULT_TTL) => {
  * Delete a specific cache key.
  */
 const del = async (key) => {
+  memoryCache.delete(key);
+  memoryExpiry.delete(key);
   if (!getIsRedisConnected()) return;
   try {
     const client = getRedisClient();
@@ -48,6 +64,12 @@ const del = async (key) => {
  * Delete all keys matching a pattern (e.g. 'products:*').
  */
 const flush = async (pattern) => {
+  // Simple memory flush (clears all for simplicity, or we could regex match)
+  if (pattern.includes('*')) {
+    memoryCache.clear();
+    memoryExpiry.clear();
+  }
+  
   if (!getIsRedisConnected()) return;
   try {
     const client = getRedisClient();

@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useStore } from '@/store/useStore';
@@ -22,8 +21,8 @@ interface Product {
   images?: string[];
 }
 
-export default function ProductDetailPage() {
-  const { id } = useParams();
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
@@ -50,7 +49,7 @@ export default function ProductDetailPage() {
     if (!product) return;
 
     addToCart({
-      product: product._id,
+      product: product.id,
       name: product.name,
       image: product.image,
       price: product.price,

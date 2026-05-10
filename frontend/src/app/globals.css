@@ -152,6 +152,34 @@ textarea {
   color: #1c1c1c !important;
 }
 
+/* Mobile Alignment & Portview Fixes */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* Ensure grids are 2 columns on mobile for better visibility */
+  .grid-cols-mobile {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  /* Prevent overlapping and force neat alignment */
+  .mobile-text-tight {
+    letter-spacing: 0.1em !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Clear Picture Sizes */
+  img {
+    max-width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
 .admin-panel table,
 .admin-panel th,
 .admin-panel td {

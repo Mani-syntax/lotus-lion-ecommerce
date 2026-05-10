@@ -7,15 +7,16 @@ import { formatINR } from '@/lib/currency';
 
 export default function CartPage() {
   const { cartItems, removeFromCart, addToCart } = useStore();
+  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.qty * item.price, 0);
+  const subtotal = safeCartItems.reduce((acc, item) => acc + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black py-12 md:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold uppercase tracking-tight mb-12">Your Bag</h1>
 
-        {cartItems.length === 0 ? (
+        {safeCartItems.length === 0 ? (
           <div className="text-center py-24 border border-dashed border-border">
             <ShoppingBag className="w-12 h-12 mx-auto text-gray-300 mb-6" />
             <p className="text-gray-500 uppercase tracking-widest mb-8">Your bag is empty.</p>
@@ -29,7 +30,7 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
             <div className="lg:col-span-2 space-y-8">
-              {cartItems.map((item) => (
+              {safeCartItems.map((item) => (
                 <div key={item.product} className="flex gap-6 pb-8 border-b border-border">
                   <div className="w-24 h-32 md:w-32 md:h-44 bg-secondary flex-shrink-0">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />

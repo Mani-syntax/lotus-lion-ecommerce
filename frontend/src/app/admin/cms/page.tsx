@@ -99,8 +99,8 @@ export default function AdminCMS() {
   const savePage = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (editingPage._id) {
-        await api.put(`/admin/content/pages/${editingPage._id}`, editingPage);
+      if (editingPage.id) {
+        await api.put(`/admin/content/pages/${editingPage.id}`, editingPage);
         toast.success('Page updated');
       } else {
         await api.post('/admin/content/pages', editingPage);
@@ -134,38 +134,127 @@ export default function AdminCMS() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white">Main Sliding Hero</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                value={homeForm?.slides?.[0]?.eyebrow || ''}
-                onChange={(e) => setHomeForm({ ...homeForm, slides: [{ ...(homeForm?.slides?.[0] || {}), eyebrow: e.target.value }] })}
-                placeholder="Eyebrow"
-                className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
-              />
-              <input
-                value={homeForm?.slides?.[0]?.title || ''}
-                onChange={(e) => setHomeForm({ ...homeForm, slides: [{ ...(homeForm?.slides?.[0] || {}), title: e.target.value }] })}
-                placeholder="Title"
-                className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
-              />
-            </div>
-            <input
-              value={homeForm?.slides?.[0]?.subtitle || ''}
-              onChange={(e) => setHomeForm({ ...homeForm, slides: [{ ...(homeForm?.slides?.[0] || {}), subtitle: e.target.value }] })}
-              placeholder="Subtitle"
-              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
-            />
-            <ImageUploader
-              multiple={false}
-              folder="lotus-lion/home/hero"
-              existingImages={homeForm?.slides?.[0]?.image ? [homeForm.slides[0].image] : []}
-              onUpload={(urls) => setHomeForm({ ...homeForm, slides: [{ ...(homeForm?.slides?.[0] || {}), image: urls[0] }] })}
-            />
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white">Main Sliding Hero Archive</h3>
+            <button
+              onClick={() => setHomeForm({ 
+                ...homeForm, 
+                slides: [...(homeForm?.slides || []), { title: '', subtitle: '', eyebrow: '', ctaText: 'Shop Now', ctaLink: '/shop', image: '' }] 
+              })}
+              className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
+            >
+              <Plus size={14} /> Add New Slide
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-8">
+            {(homeForm?.slides || []).map((slide: any, index: number) => (
+              <div key={index} className="bg-black/30 border border-white/5 rounded-2xl p-6 space-y-4 relative group">
+                <button 
+                  onClick={() => {
+                    const next = [...homeForm.slides];
+                    next.splice(index, 1);
+                    setHomeForm({ ...homeForm, slides: next });
+                  }}
+                  className="absolute top-4 right-4 p-2 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                    <label className="text-[8px] uppercase font-bold text-gray-500 mb-2 block">Slide Image</label>
+                    <ImageUploader
+                      multiple={false}
+                      folder="lotus-lion/home/hero"
+                      existingImages={slide.image ? [slide.image] : []}
+                      onUpload={(urls) => {
+                        const next = [...homeForm.slides];
+                        next[index].image = urls[0];
+                        setHomeForm({ ...homeForm, slides: next });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Eyebrow</label>
+                        <input
+                          value={slide.eyebrow || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].eyebrow = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          placeholder="e.g. Online Exclusive"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Title</label>
+                        <input
+                          value={slide.title || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].title = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          placeholder="e.g. Lotus & Lion"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[8px] uppercase font-bold text-gray-500">Subtitle</label>
+                      <input
+                        value={slide.subtitle || ''}
+                        onChange={(e) => {
+                          const next = [...homeForm.slides];
+                          next[index].subtitle = e.target.value;
+                          setHomeForm({ ...homeForm, slides: next });
+                        }}
+                        placeholder="Describe the mood of this slide..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Button Text</label>
+                        <input
+                          value={slide.ctaText || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].ctaText = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Attaching Page (URL)</label>
+                        <input
+                          value={slide.ctaLink || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].ctaLink = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          placeholder="/collections/lotus"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-white/5">
             {[
               ['lotus', 'Lotus Collection'],
               ['lion', 'Lion Collection'],
@@ -254,7 +343,7 @@ export default function AdminCMS() {
               </div>
               <div className="flex flex-wrap gap-2">
                  {navbar?.data?.map((item: any, i: number) => (
-                   <span key={i} className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                   <span key={item.id || `nav-item-${i}`} className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-gray-400">
                      {item.label}
                    </span>
                  ))}
@@ -276,7 +365,7 @@ export default function AdminCMS() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                  {footer?.data?.map((group: any, i: number) => (
-                   <div key={i} className="p-3 bg-white/5 rounded-xl border border-white/5">
+                   <div key={group.id || `footer-group-${i}`} className="p-3 bg-white/5 rounded-xl border border-white/5">
                       <p className="text-[8px] font-bold uppercase text-gray-500 mb-1">{group.heading}</p>
                       <p className="text-[10px] text-white font-bold">{group.links?.length} Links</p>
                    </div>
@@ -302,9 +391,9 @@ export default function AdminCMS() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           {pages?.map((page: any) => (
+           {pages?.map((page: any, i: number) => (
              <motion.div 
-               key={page._id}
+               key={page.id || `page-${i}`}
                whileHover={{ y: -5 }}
                className="bg-[#111] border border-white/5 rounded-2xl p-6 group hover:border-primary/30 transition-all"
              >
@@ -314,7 +403,7 @@ export default function AdminCMS() {
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => setEditingPage(page)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white"><Edit2 size={14} /></button>
-                    <button onClick={() => setPageToDelete(page._id)} className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+                    <button onClick={() => setPageToDelete(page.id)} className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 </div>
                 <h3 className="text-sm font-bold text-white uppercase tracking-tight mb-1">{page.title}</h3>
@@ -332,7 +421,7 @@ export default function AdminCMS() {
       <Modal 
         isOpen={!!editingPage} 
         onClose={() => setEditingPage(null)} 
-        title={editingPage?._id ? 'Edit Page' : 'Create New Page'}
+        title={editingPage?.id ? 'Edit Page' : 'Create New Page'}
         size="xl"
       >
         <form onSubmit={savePage} className="space-y-6">

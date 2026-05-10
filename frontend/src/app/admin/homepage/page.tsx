@@ -37,20 +37,20 @@ export default function HomepageBuilderPage() {
 
   const saveSection = async (section: any, index: number) => {
     const payload = { ...section, order: index + 1 };
-    const request = section._id ? api.put(`/admin/homepage/sections/${section._id}`, payload) : api.post('/admin/homepage/sections', payload);
+    const request = section.id ? api.put(`/admin/homepage/sections/${section.id}`, payload) : api.post('/admin/homepage/sections', payload);
     const { data } = await request;
     setSections((current) => current.map((item, itemIndex) => itemIndex === index ? data : item));
     toast.success('Homepage section saved');
   };
 
   const deleteSection = async (section: any) => {
-    if (section._id) await api.delete(`/admin/homepage/sections/${section._id}`);
+    if (section.id) await api.delete(`/admin/homepage/sections/${section.id}`);
     setSections((current) => current.filter((item) => item !== section));
     toast.success('Homepage section removed');
   };
 
   const saveAnnouncement = async (announcement: any, index: number) => {
-    const request = announcement._id ? api.put(`/admin/announcements/${announcement._id}`, announcement) : api.post('/admin/announcements', announcement);
+    const request = announcement.id ? api.put(`/admin/announcements/${announcement.id}`, announcement) : api.post('/admin/announcements', announcement);
     const { data } = await request;
     setAnnouncements((current) => current.map((item, itemIndex) => itemIndex === index ? data : item));
     toast.success('Announcement saved');
@@ -68,7 +68,7 @@ export default function HomepageBuilderPage() {
           </button>
         </div>
         {sections.map((section, index) => (
-          <div key={section._id || index} className="border border-white/10 bg-[#111] p-5">
+          <div key={section.id || index} className="border border-white/10 bg-[#111] p-5">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <GripVertical className="text-[#777]" size={18} />
@@ -108,7 +108,7 @@ export default function HomepageBuilderPage() {
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {announcements.map((announcement, index) => (
-            <div key={announcement._id || index} className="border border-white/10 bg-[#111] p-5">
+            <div key={announcement.id || index} className="border border-white/10 bg-[#111] p-5">
               <textarea value={announcement.message || ''} onChange={(e) => setAnnouncements(announcements.map((item, i) => i === index ? { ...item, message: e.target.value } : item))} placeholder="Announcement message" className="min-h-20 w-full border p-3 text-sm outline-none" />
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <input value={announcement.linkLabel || ''} onChange={(e) => setAnnouncements(announcements.map((item, i) => i === index ? { ...item, linkLabel: e.target.value } : item))} placeholder="Link label" className="border p-3 text-sm outline-none" />

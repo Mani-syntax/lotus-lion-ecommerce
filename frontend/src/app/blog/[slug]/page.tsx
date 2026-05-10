@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 
-export default function BlogArticlePage() {
-  const { slug } = useParams();
+export default function BlogArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

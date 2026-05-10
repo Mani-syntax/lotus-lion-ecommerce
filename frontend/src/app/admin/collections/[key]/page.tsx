@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
 import { Crown, Flower2, Plus, Save } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -9,9 +8,9 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import ImageUploader from '@/components/admin/ImageUploader';
 import { formatINR } from '@/lib/currency';
 
-export default function CollectionControlPage() {
-  const params = useParams();
-  const key = params.key as 'lotus' | 'lion';
+export default function CollectionControlPage({ params }: { params: Promise<{ key: string }> }) {
+  const { key: rawKey } = use(params);
+  const key = rawKey as 'lotus' | 'lion';
   const [collection, setCollection] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const Icon = key === 'lotus' ? Flower2 : Crown;
@@ -20,7 +19,10 @@ export default function CollectionControlPage() {
     api.get(`/admin/collections/${key}`).then(({ data }) => {
       setCollection(data.collection);
       setProducts(data.products || []);
-    }).catch(() => toast.error('Could not load collection'));
+    }).catch((error: any) => {
+      const message = error.response?.data?.message || error.message || 'Could not load collection';
+      toast.error(message);
+    });
   }, [key]);
 
   const update = (path: string, value: any) => {
@@ -51,7 +53,7 @@ export default function CollectionControlPage() {
 
   return (
     <div className="space-y-8 pb-24">
-      <AdminHeader title={`${collection.title} Control`} subtitle="Independent categories, banners, drops, homepage blocks, and featured products." />
+      <AdminHeader title={`${collection.name || collection.title || 'Collection'} Control`} subtitle="Independent categories, banners, drops, homepage blocks, and featured products." />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="border border-[#c8a45d]/20 bg-[#111] p-6">
@@ -77,7 +79,7 @@ export default function CollectionControlPage() {
           <h2 className="mb-5 text-[12px] font-bold uppercase tracking-[0.2em] text-[#c8a45d]">Drop Schedule</h2>
           <div className="space-y-3">
             {(collection.dropSchedules || []).map((drop: any, index: number) => (
-              <div key={drop._id || index} className="grid gap-3 border border-white/10 bg-white/5 p-4">
+              <div key={drop.id || index} className="grid gap-3 border border-white/10 bg-white/5 p-4">
                 <input value={drop.title || ''} onChange={(e) => {
                   const next = [...(collection.dropSchedules || [])];
                   next[index] = { ...drop, title: e.target.value };
@@ -123,7 +125,7 @@ export default function CollectionControlPage() {
           <h2 className="mb-5 text-[12px] font-bold uppercase tracking-[0.2em] text-[#c8a45d]">Products In This Collection</h2>
           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-2">
             {products.map((product) => (
-              <div key={product._id} className="flex items-center justify-between border border-white/10 bg-white/5 p-3">
+              <div key={product.id} className="flex items-center justify-between border border-white/10 bg-white/5 p-3">
                 <div>
                   <p className="text-sm text-white">{product.name}</p>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-[#777]">{product.category} / stock {product.countInStock} / {formatINR(product.discountPrice || product.price)}</p>

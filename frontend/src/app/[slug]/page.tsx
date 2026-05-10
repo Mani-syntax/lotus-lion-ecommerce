@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 
@@ -32,9 +32,11 @@ const FALLBACK_PAGES: Record<string, { title: string; eyebrow: string; body: str
   },
 };
 
-export default function ContentPage({ params }: { params: { slug: string } }) {
+export default function ContentPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = use(params);
+  const { slug } = unwrappedParams;
   const [page, setPage] = useState<any>(null);
-  const fallback = useMemo(() => FALLBACK_PAGES[params.slug], [params.slug]);
+  const fallback = useMemo(() => FALLBACK_PAGES[slug], [slug]);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,7 +44,7 @@ export default function ContentPage({ params }: { params: { slug: string } }) {
     const fetchPage = async () => {
       try {
         const { data } = await api.get('/admin/content/pages');
-        const match = data.find((item: any) => item.slug === params.slug && item.isPublished !== false);
+        const match = data.find((item: any) => item.slug === slug && item.isPublished !== false);
         if (isMounted) setPage(match || null);
       } catch {
         if (isMounted) setPage(null);
@@ -53,7 +55,7 @@ export default function ContentPage({ params }: { params: { slug: string } }) {
     return () => {
       isMounted = false;
     };
-  }, [params.slug]);
+  }, [slug]);
 
   const content = page || fallback;
 

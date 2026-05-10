@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
@@ -16,6 +16,15 @@ interface ImageUploaderProps {
 export default function ImageUploader({ onUpload, existingImages = [], multiple = true, folder }: ImageUploaderProps) {
   const [images, setImages] = useState<string[]>(existingImages);
   const [uploading, setUploading] = useState(false);
+  const initialized = useRef(false);
+
+  // Sync internal state when existingImages prop changes (e.g., after product data loads)
+  useEffect(() => {
+    if (!initialized.current && existingImages.length > 0) {
+      initialized.current = true;
+      setImages(existingImages);
+    }
+  }, [existingImages]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);

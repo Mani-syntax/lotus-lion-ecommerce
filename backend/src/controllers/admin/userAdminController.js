@@ -1,59 +1,81 @@
-const User = require('../../models/User');
-const Order = require('../../models/Order');
+const supabase = require('../../config/supabase');
+
+const mapUser = (u) => {
+  if (!u) return null;
+  return {
+    ...u,
+    _id: u.id,
+    isBlocked: u.is_blocked,
+    isAdmin: ['admin', 'super-admin'].includes(u.role)
+  };
+};
 
 const getAdminUsers = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, search = '', role = '' } = req.query;
-    const query = {};
-    if (search) query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-    ];
-    if (role) query.role = role;
-    const [users, total] = await Promise.all([
-      User.find(query).select('-password').sort({ createdAt: -1 })
-        .skip((page - 1) * limit).limit(Number(limit)),
-      User.countDocuments(query),
-    ]);
-    res.json({ users, page: Number(page), pages: Math.ceil(total / limit), total });
+    const from = (Number(page) - 1) * Number(limit);
+    const to = from + Number(limit) - 1;
+
+    let query = supabase.from('profiles').select('*', { count: 'exact' });
+
+    if (search) query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    if (role) query = query.eq('role', role);
+
+    const { data, count, error } = await query.order('created_at', { ascending: false }).range(from, to);
+    if (error) throw error;
+
+    res.json({
+      users: data.map(mapUser),
+      page: Number(page),
+      pages: Math.ceil((count || 0) / limit),
+      total: count
+    });
   } catch (error) { next(error); }
 };
 
 const getAdminUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) { res.status(404); throw new Error('User not found'); }
-    res.json(user);
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', req.params.id).single();
+    if (error || !data) { res.status(404); throw new Error('User not found'); }
+    res.json(mapUser(data));
   } catch (error) { next(error); }
 };
 
 const getUserOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ user: req.params.id }).sort({ createdAt: -1 });
-    res.json(orders);
+    const { data, error } = await supabase.from('orders').select('*').eq('user_id', req.params.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data);
   } catch (error) { next(error); }
 };
 
 const updateAdminUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) { res.status(404); throw new Error('User not found'); }
-    const { isBlocked, role } = req.body;
-    if (isBlocked !== undefined) user.isBlocked = Boolean(isBlocked);
-    if (role && ['user', 'admin', 'super-admin'].includes(role)) user.role = role;
-    await user.save();
-    res.json({ message: 'User updated', user: { _id: user._id, name: user.name, email: user.email, role: user.role, isBlocked: user.isBlocked } });
+    const { isBlocked, is_blocked, role } = req.body;
+    const blockValue = isBlocked !== undefined ? isBlocked : is_blocked;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        is_blocked: blockValue !== undefined ? Boolean(blockValue) : undefined,
+        role: role || undefined
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ message: 'User updated', user: mapUser(data) });
   } catch (error) { next(error); }
 };
 
 const deleteAdminUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) { res.status(404); throw new Error('User not found'); }
-    if (req.user._id.toString() === req.params.id) {
+    if (req.user.id === req.params.id) {
       res.status(400); throw new Error('Cannot delete your own account');
     }
-    await User.deleteOne({ _id: user._id });
+    const { error } = await supabase.from('profiles').delete().eq('id', req.params.id);
+    if (error) throw error;
     res.json({ message: 'User removed' });
   } catch (error) { next(error); }
 };

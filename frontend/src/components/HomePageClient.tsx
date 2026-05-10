@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Crown, Flower2, Headphones, RefreshCcw, ShieldCheck, Truck } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
 import HeroSlider from '@/components/HeroSlider';
+import ProductCard from '@/components/ProductCard';
 
 const fallbackCollections = [
   {
@@ -55,38 +56,7 @@ function ArtPanel({ index = 0, label }: { index?: number; label: string }) {
   );
 }
 
-function ProductTile({ product, index }: { product: any; index: number }) {
-  const images = product.images || (product.image ? [product.image] : []);
-  const activeImage = images[0];
 
-  return (
-    <Link href={product.href || '/products'} className="group block">
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7] group/tile">
-        {activeImage ? (
-          <img
-            src={activeImage}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-          />
-        ) : (
-          <ArtPanel index={index} label={product.name} />
-        )}
-
-        <span className="absolute left-3 top-3 z-20 bg-[#df0029] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-          {product.save || 'New'}
-        </span>
-        <span className="absolute inset-x-0 bottom-0 z-20 bg-[#1c1c1c] py-3 text-center text-[12px] uppercase tracking-[0.18em] text-white opacity-0 transition-opacity group-hover:opacity-100">
-          Choose options
-        </span>
-      </div>
-      <div className="pt-4 text-center">
-        <p className="min-h-10 text-[13px] leading-5 text-[#1c1c1c]">{product.name}</p>
-        <p className="mt-2 text-[13px] text-[#df0029]">{product.price}</p>
-        <p className="text-[12px] text-[#777] line-through">{product.regular}</p>
-      </div>
-    </Link>
-  );
-}
 
 export default function HomePageClient({ initialData }: { initialData: any }) {
   const [siteCms] = useState(initialData || {});
@@ -107,19 +77,8 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
     href: `/products/${product.slug || product.id || ''}`,
   })) : null;
 
-  const lotusRail = homeContent.lotusProducts.map((p: any) => ({
-    ...p,
-    price: formatINR(p.price || 0),
-    regular: formatINR(p.price || 0),
-    href: `/products/${p.slug || p.id || ''}`,
-  }));
-
-  const lionRail = homeContent.lionProducts.map((p: any) => ({
-    ...p,
-    price: formatINR(p.price || 0),
-    regular: formatINR(p.price || 0),
-    href: `/products/${p.slug || p.id || ''}`,
-  }));
+  const lotusRail = homeContent.lotusProducts || [];
+  const lionRail = homeContent.lionProducts || [];
 
   const liveCollections = siteCms.collections?.length ? siteCms.collections : null;
 
@@ -134,7 +93,7 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
           <Link href="/products?category=Womens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></Link>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {lotusRail.slice(0, 4).map((product: any, index: number) => <ProductTile key={product.id || index} product={product} index={index} />)}
+          {lotusRail.slice(0, 4).map((product: any, index: number) => <ProductCard key={product.id || index} product={product} />)}
         </div>
       </section>
 
@@ -172,7 +131,7 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
           <Link href="/products?category=Mens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></Link>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {lionRail.slice(0, 4).map((product: any, index: number) => <ProductTile key={product.id || index} product={product} index={index + 1} />)}
+          {lionRail.slice(0, 4).map((product: any, index: number) => <ProductCard key={product.id || index} product={product} />)}
         </div>
       </section>
 

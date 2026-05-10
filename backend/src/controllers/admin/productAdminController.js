@@ -171,6 +171,7 @@ const createProduct = async (req, res, next) => {
     await flush('products:*');
     await flush('products:list:*');
     await flush('products:featured:*');
+    await flush('content:site');
 
     // Re-fetch full product with images
     const { data: fullProduct } = await supabase
@@ -249,6 +250,7 @@ const updateProduct = async (req, res, next) => {
     await flush('products:*');
     await flush('products:list:*');
     await flush('products:featured:*');
+    await flush('content:site');
     if (product?.slug) {
       await flush(`product:slug:${product.slug}`);
     }
@@ -270,6 +272,7 @@ const deleteProduct = async (req, res, next) => {
     const { error } = await supabase.from('products').delete().eq('id', req.params.id);
     if (error) throw error;
     await flush('products:*');
+    await flush('content:site');
     res.json({ message: 'Product removed' });
   } catch (error) { next(error); }
 };
@@ -285,6 +288,7 @@ const toggleFeatured = async (req, res, next) => {
     await flush('products:featured:*');
     await flush(`product:slug:${current.slug}`);
     await flush('products:list:*');
+    await flush('content:site');
     
     res.json(mapToCamelCase(data));
   } catch (error) { next(error); }
@@ -301,6 +305,7 @@ const toggleVisibility = async (req, res, next) => {
     await flush('products:featured:*');
     await flush(`product:slug:${current.slug}`);
     await flush('products:list:*');
+    await flush('content:site');
     
     res.json(mapToCamelCase(data));
   } catch (error) { next(error); }

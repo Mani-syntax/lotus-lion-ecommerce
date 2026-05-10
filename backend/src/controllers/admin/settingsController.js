@@ -52,8 +52,7 @@ const updateSettings = async (req, res, next) => {
     const { data, error } = await supabase.from('content').upsert({
       key: 'settings',
       type: 'settings',
-      data: settingsData,
-      updated_at: new Date().toISOString()
+      data: settingsData
     }, { 
       onConflict: 'key',
       ignoreDuplicates: false

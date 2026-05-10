@@ -32,6 +32,7 @@ const updateCollection = async (req, res, next) => {
     await flush(`collection:${collectionSlug}:*`);
     await flush('collections:*');
     await flush('products:list:*'); // Invalidate product lists since they might be filtered by collection
+    await flush('content:site'); // Invalidate main page CMS payload
     
     res.json(data);
   } catch (error) { next(error); }

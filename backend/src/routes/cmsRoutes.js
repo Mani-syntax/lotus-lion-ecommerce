@@ -10,6 +10,7 @@ const mapProduct = (p) => {
     _id: p.id,
     id: p.id,
     name: p.name,
+    slug: p.slug,
     price: p.price,
     discountPrice: p.discount_price,
     image: p.images?.[0]?.image_url || p.image_url,

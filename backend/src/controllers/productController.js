@@ -80,16 +80,19 @@ const getProducts = async (req, res, next) => {
 // @route GET /api/products/:slug
 const getProductBySlug = async (req, res, next) => {
   try {
-    const slug = req.params.slug.toLowerCase().trim();
-    const cacheKey = `product:slug:${slug}`;
+    const identifier = req.params.slug.toLowerCase().trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    const cacheKey = `product:${isUuid ? 'id' : 'slug'}:${identifier}`;
     
     const data = await remember(cacheKey, async () => {
-      const { data: product, error } = await supabase
+      let query = supabase
         .from('products')
         .select('id, name, slug, description, rich_description, price, discount_price, category, stock_quantity, is_featured, is_visible, collection_id, images:product_images(image_url), variants:product_variants(*)')
-        .eq('slug', slug)
-        .eq('is_visible', true)
-        .single();
+        .eq('is_visible', true);
+
+      query = isUuid ? query.eq('id', identifier) : query.eq('slug', identifier);
+
+      const { data: product, error } = await query.single();
 
       if (error || !product) {
         return null;

@@ -2,14 +2,73 @@
 
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
+import api from '@/lib/api';
+
+type CartAvailability = {
+  available: boolean;
+  stock: number;
+  message?: string;
+};
 
 export default function CartPage() {
   const { cartItems, removeFromCart, addToCart } = useStore();
-  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
+  const [availability, setAvailability] = useState<Record<string, CartAvailability>>({});
+  const [checkingStock, setCheckingStock] = useState(true);
+  const safeCartItems = useMemo(() => Array.isArray(cartItems) ? cartItems : [], [cartItems]);
 
-  const subtotal = safeCartItems.reduce((acc, item) => acc + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
+  useEffect(() => {
+    let mounted = true;
+
+    const checkCartStock = async () => {
+      if (safeCartItems.length === 0) {
+        setAvailability({});
+        setCheckingStock(false);
+        return;
+      }
+
+      setCheckingStock(true);
+      const results = await Promise.all(
+        safeCartItems.map(async (item) => {
+          try {
+            const { data } = await api.get(`/products/${item.product}`);
+            const stock = Number(data.countInStock ?? data.stock_quantity ?? 0);
+            const requestedQty = Number(item.qty) || 0;
+            return [item.product, {
+              available: stock > 0 && stock >= requestedQty,
+              stock,
+              message: stock <= 0 ? 'Out of stock' : stock < requestedQty ? `Only ${stock} left` : undefined,
+            }] as const;
+          } catch {
+            return [item.product, {
+              available: false,
+              stock: 0,
+              message: 'No longer available',
+            }] as const;
+          }
+        })
+      );
+
+      if (mounted) {
+        setAvailability(Object.fromEntries(results));
+        setCheckingStock(false);
+      }
+    };
+
+    checkCartStock();
+    return () => {
+      mounted = false;
+    };
+  }, [safeCartItems]);
+
+  const unavailableItems = safeCartItems.filter((item) => availability[item.product]?.available === false);
+  const canCheckout = !checkingStock && unavailableItems.length === 0;
+  const subtotal = safeCartItems.reduce((acc, item) => {
+    if (availability[item.product]?.available === false) return acc;
+    return acc + (Number(item.qty) || 0) * (Number(item.price) || 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black py-12 md:py-24">
@@ -31,7 +90,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
             <div className="lg:col-span-2 space-y-8">
               {safeCartItems.map((item) => (
-                <div key={item.product} className="flex gap-6 pb-8 border-b border-border">
+                <div key={item.product} className={`flex gap-6 pb-8 border-b border-border ${availability[item.product]?.available === false ? 'opacity-70' : ''}`}>
                   <div className="w-24 h-32 md:w-32 md:h-44 bg-secondary flex-shrink-0">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   </div>
@@ -47,19 +106,26 @@ export default function CartPage() {
                         </button>
                       </div>
                       <p className="text-xs text-primary font-medium tracking-widest">{formatINR(item.price)}</p>
+                      {availability[item.product]?.available === false && (
+                        <p className="mt-2 inline-block bg-red-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-600">
+                          {availability[item.product]?.message || 'Out of stock'}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex justify-between items-end">
                       <div className="flex items-center border border-border">
                         <button
                           onClick={() => addToCart({ ...item, qty: Math.max(1, item.qty - 1) })}
+                          disabled={availability[item.product]?.available === false}
                           className="px-3 py-1 hover:bg-secondary transition-colors border-r border-border text-xs"
                         >
                           -
                         </button>
                         <span className="px-4 py-1 text-xs font-medium">{item.qty}</span>
                         <button
-                          onClick={() => addToCart({ ...item, qty: Math.min(item.countInStock, item.qty + 1) })}
+                          onClick={() => addToCart({ ...item, countInStock: availability[item.product]?.stock ?? item.countInStock, qty: Math.min(availability[item.product]?.stock ?? item.countInStock, item.qty + 1) })}
+                          disabled={availability[item.product]?.available === false}
                           className="px-3 py-1 hover:bg-secondary transition-colors border-l border-border text-xs"
                         >
                           +
@@ -90,11 +156,24 @@ export default function CartPage() {
                   <span className="text-primary">{formatINR(subtotal)}</span>
                 </div>
               </div>
+              {unavailableItems.length > 0 && (
+                <p className="mb-6 bg-red-50 px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-red-600">
+                  Remove unavailable or out-of-stock products before checkout.
+                </p>
+              )}
               <Link
                 href="/checkout"
-                className="w-full bg-black dark:bg-white text-white dark:text-black py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary dark:hover:bg-primary transition-all flex items-center justify-center gap-2"
+                aria-disabled={!canCheckout}
+                onClick={(e) => {
+                  if (!canCheckout) e.preventDefault();
+                }}
+                className={`w-full py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+                  canCheckout
+                    ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-primary dark:hover:bg-primary'
+                    : 'pointer-events-none bg-gray-300 text-gray-500'
+                }`}
               >
-                Checkout
+                {checkingStock ? 'Checking Stock...' : 'Checkout'}
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <p className="mt-6 text-[10px] text-center text-gray-500 uppercase tracking-widest">

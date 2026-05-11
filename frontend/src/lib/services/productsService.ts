@@ -51,7 +51,8 @@ export const productsService = {
   // Fetch single product by slug
   async getProductBySlug(slug: string) {
     try {
-      const { data, error } = await supabase
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      let query = supabase
         .from('products')
         .select(`
           *,
@@ -59,10 +60,12 @@ export const productsService = {
           images:product_images(id, image_url, cloudinary_public_id, alt_text, display_order),
           variants:product_variants(id, size, color, quantity)
         `)
-        .eq('slug', slug)
         .eq('is_visible', true)
-        .lte('release_date', new Date().toISOString())
-        .single();
+        .lte('release_date', new Date().toISOString());
+
+      query = isUuid ? query.eq('id', slug) : query.eq('slug', slug);
+
+      const { data, error } = await query.single();
 
       if (error) throw error;
       return data;

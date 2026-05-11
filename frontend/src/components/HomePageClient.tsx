@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Crown, Flower2, Headphones, RefreshCcw, ShieldCheck, Truck } from 'lucide-react';
-import { formatINR } from '@/lib/currency';
 import HeroSlider from '@/components/HeroSlider';
 import ProductCard from '@/components/ProductCard';
 
@@ -37,7 +36,118 @@ const journals = [
   'Building A Two-Color Capsule That Still Feels Alive',
 ];
 
-const searches = ['Lotus Collections', 'Lion Collections', 'Artist Outfits', 'Co-ord Sets', 'Studio Dresses', 'Overshirts', 'Linen', 'Canvas Cotton', 'Gallery Wear', 'Occasion Wear', 'Daily Sets', 'Sale'];
+const collectionUrlByKey: Record<string, string> = {
+  lotus: '/collections/lotus',
+  lion: '/collections/lion',
+  artist: '/products?category=Artist%20Outfits',
+};
+
+type HomeCollection = {
+  slug?: string;
+  name?: string;
+  title?: string;
+  href?: string;
+  description?: string;
+  body?: string;
+  banner_url?: string;
+  hero?: {
+    image?: string;
+    title?: string;
+    subtitle?: string;
+  };
+};
+
+type HomeProduct = {
+  _id: string;
+  id?: string;
+  name: string;
+  slug?: string;
+  price: number;
+  discountPrice?: number;
+  image: string;
+  brand: string;
+  category: string;
+  collectionType?: 'lotus' | 'lion' | 'artist';
+  countInStock: number;
+  images?: (string | { image_url: string })[];
+};
+
+type HomeCms = {
+  home?: {
+    slides?: unknown[];
+  };
+  lotusProducts?: HomeProduct[];
+  lionProducts?: HomeProduct[];
+  collections?: HomeCollection[];
+};
+
+function ProductRail({ title, href, products }: { title: string; href: string; products: HomeProduct[] }) {
+  const railRef = useRef<HTMLDivElement>(null);
+
+  const scrollRail = (direction: 'previous' | 'next') => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const amount = Math.min(rail.clientWidth * 0.9, 900);
+    rail.scrollBy({ left: direction === 'next' ? amount : -amount, behavior: 'smooth' });
+  };
+
+  if (!products.length) return null;
+
+  return (
+    <section className="py-12 sm:py-16">
+      <div className="mx-auto mb-8 flex max-w-[1440px] items-center justify-between px-4 sm:px-8">
+        <button
+          type="button"
+          onClick={() => scrollRail('previous')}
+          className="grid h-12 w-12 place-items-center rounded-full border border-[#dddddd] bg-white transition hover:bg-[#f7f7f7]"
+          aria-label={`Previous ${title} products`}
+        >
+          <ChevronLeft size={19} />
+        </button>
+        <Link href={href} className="brand-heading text-center text-2xl uppercase hover:underline sm:text-4xl">
+          {title}
+        </Link>
+        <button
+          type="button"
+          onClick={() => scrollRail('next')}
+          className="grid h-12 w-12 place-items-center rounded-full border border-[#dddddd] bg-white transition hover:bg-[#f7f7f7]"
+          aria-label={`Next ${title} products`}
+        >
+          <ChevronRight size={19} />
+        </button>
+      </div>
+
+      <div
+        ref={railRef}
+        className="product-rail flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 sm:gap-7 sm:px-8 lg:px-[5vw]"
+      >
+        {products.map((product: HomeProduct, index: number) => (
+          <div
+            key={product.id || product._id || index}
+            className="w-[82vw] flex-none snap-start sm:w-[54vw] md:w-[38vw] lg:w-[30vw] xl:w-[29vw] 2xl:w-[28vw]"
+          >
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function getCollectionKey(collection: HomeCollection) {
+  const source = `${collection?.slug || ''} ${collection?.name || ''} ${collection?.title || ''}`.toLowerCase();
+  if (source.includes('lotus')) return 'lotus';
+  if (source.includes('lion')) return 'lion';
+  if (source.includes('artist')) return 'artist';
+  return collection?.slug || '';
+}
+
+function getCollectionHref(collection: HomeCollection) {
+  const key = getCollectionKey(collection);
+  if (collectionUrlByKey[key]) return collectionUrlByKey[key];
+  if (collection?.slug) return `/collections/${collection.slug}`;
+  return collection?.href || '/products';
+}
 
 function ArtPanel({ index = 0, label }: { index?: number; label: string }) {
   return (
@@ -58,8 +168,8 @@ function ArtPanel({ index = 0, label }: { index?: number; label: string }) {
 
 
 
-export default function HomePageClient({ initialData }: { initialData: any }) {
-  const [siteCms] = useState(initialData || {});
+export default function HomePageClient({ initialData }: { initialData: HomeCms | null }) {
+  const [siteCms] = useState<HomeCms>(initialData || {});
   
   const homeContent = {
     slides: siteCms?.home?.slides || [{ title: 'Lotus & Lion', subtitle: 'Modern luxury clothing.', eyebrow: 'Online Exclusive' }],
@@ -67,15 +177,6 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
     lionProducts: siteCms?.lionProducts || [],
     collections: siteCms?.collections || []
   };
-
-  const featuredProducts = siteCms?.featuredProducts?.length ? siteCms.featuredProducts.map((product: any) => ({
-    name: product.name,
-    price: formatINR(product.price || 0),
-    regular: product.price ? formatINR(product.price || 0) : '',
-    save: 'Featured',
-    images: product.images && product.images.length > 0 ? product.images : [],
-    href: `/products/${product.slug || product.id || ''}`,
-  })) : null;
 
   const lotusRail = homeContent.lotusProducts || [];
   const lionRail = homeContent.lionProducts || [];
@@ -86,21 +187,12 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
     <div className="bg-white text-[#1c1c1c]">
       <HeroSlider slides={homeContent.slides} />
 
-      <section className="mx-auto max-w-[1440px] px-4 py-14 sm:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <Link href="/products?category=Womens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronLeft size={18} /></Link>
-          <Link href="/products?category=Womens" className="brand-heading text-center text-2xl uppercase hover:underline">Lotus Collections</Link>
-          <Link href="/products?category=Womens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></Link>
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {lotusRail.slice(0, 4).map((product: any, index: number) => <ProductCard key={product.id || index} product={product} />)}
-        </div>
-      </section>
+      <ProductRail title="Lotus Collections" href="/collections/lotus" products={lotusRail.slice(0, 8)} />
 
       <section className="mx-auto max-w-[1440px] space-y-10 px-4 py-8 sm:px-8">
-        {(liveCollections || fallbackCollections).map((collection: any, index: number) => {
-          const collectionKey = collection.slug || (collection.title?.startsWith?.('Lotus') ? 'lotus' : 'lion');
-          const collectionHref = collection.slug ? `/collections/${collection.slug}` : (collection.href || '/products');
+        {(liveCollections || fallbackCollections).map((collection: HomeCollection, index: number) => {
+          const collectionKey = getCollectionKey(collection);
+          const collectionHref = getCollectionHref(collection);
           const collectionImage = collection.hero?.image || collection.banner_url;
           return (
             <div key={index} className={`grid items-center gap-8 border-y border-[#dddddd] py-10 md:grid-cols-2 ${index % 2 === 1 ? 'md:[&>*:first-child]:order-2' : ''}`}>
@@ -124,16 +216,7 @@ export default function HomePageClient({ initialData }: { initialData: any }) {
         })}
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-4 py-14 sm:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <Link href="/products?category=Mens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronLeft size={18} /></Link>
-          <Link href="/products?category=Mens" className="brand-heading text-center text-2xl uppercase hover:underline">Lion Collections</Link>
-          <Link href="/products?category=Mens" className="grid h-10 w-10 place-items-center border border-[#dddddd]"><ChevronRight size={18} /></Link>
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
-          {lionRail.slice(0, 4).map((product: any, index: number) => <ProductCard key={product.id || index} product={product} />)}
-        </div>
-      </section>
+      <ProductRail title="Lion Collections" href="/collections/lion" products={lionRail.slice(0, 8)} />
 
       <section className="mx-auto max-w-5xl px-4 py-12 text-center sm:px-8">
         <h2 className="brand-heading text-3xl uppercase">Studio Journal</h2>

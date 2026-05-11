@@ -6,14 +6,15 @@ import { ShoppingBag } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 import { formatINR } from '@/lib/currency';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Product {
   _id: string;
+  id?: string;
   name: string;
-  slug: string;
+  slug?: string;
   price: number;
   discountPrice?: number;
   image: string;
@@ -27,16 +28,32 @@ interface Product {
 const ProductCard = ({ product }: { product: Product }) => {
   const addToCart = useStore((state) => state.addToCart);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
-  const images = product.images && product.images.length > 0 ? product.images : [product.image];
+  const images = useMemo(() => {
+    const gallery = product.images && product.images.length > 0 ? product.images : [product.image];
+    return gallery
+      .map((img) => (typeof img === 'string' ? img : img?.image_url))
+      .filter(Boolean);
+  }, [product.image, product.images]);
+
+  useEffect(() => {
+    if (images.length < 2) return;
+    const timer = window.setInterval(() => {
+      setCurrentImageIdx((prev) => (prev + 1) % images.length);
+    }, 3400);
+    return () => window.clearInterval(timer);
+  }, [images.length]);
 
   const currentPrice = product.discountPrice ? product.discountPrice : product.price;
   const regularPrice = product.discountPrice ? product.price : null;
   const savings = regularPrice ? Math.round(((regularPrice - currentPrice) / regularPrice) * 100) : 0;
+  const productIdentifier = product.slug || product.id || product._id;
+  const productHref = productIdentifier ? `/product/${productIdentifier}` : '/products';
+  const activeImageIndex = images.length ? currentImageIdx % images.length : 0;
 
   const handleAddToCart = (e: MouseEvent) => {
     e.preventDefault();
     addToCart({
-      product: product.id,
+      product: productIdentifier,
       name: product.name,
       image: product.image,
       price: currentPrice,
@@ -47,22 +64,17 @@ const ProductCard = ({ product }: { product: Product }) => {
   };
 
   return (
-    <Link href={`/product/${product.slug}`} className="group block bg-white text-[#1c1c1c]">
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7] group/card">
+    <Link href={productHref} className="group block bg-white text-[#1c1c1c]">
+      <div className="group/card relative aspect-[4/5] overflow-hidden bg-[#f7f7f7]">
         <AnimatePresence mode="wait">
           <motion.img
-            key={currentImageIdx}
-            src={(() => {
-              const img = images[currentImageIdx];
-              if (!img) return 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000';
-              const url = typeof img === 'string' ? img : (img as any).image_url;
-              return url || 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000';
-            })()}
+            key={activeImageIndex}
+            src={images[activeImageIndex] || 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000'}
             alt={product.name}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.45 }}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </AnimatePresence>
@@ -73,28 +85,32 @@ const ProductCard = ({ product }: { product: Product }) => {
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   setCurrentImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
                 }}
-                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+                aria-label="Previous product image"
+                className="grid h-10 w-10 place-items-center rounded-full bg-white/90 shadow-sm transition hover:bg-white"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={18} />
               </button>
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   setCurrentImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
                 }}
-                className="p-1 bg-white/80 hover:bg-white rounded-full shadow-sm"
+                aria-label="Next product image"
+                className="grid h-10 w-10 place-items-center rounded-full bg-white/90 shadow-sm transition hover:bg-white"
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={18} />
               </button>
             </div>
-            <div className="absolute bottom-12 inset-x-0 flex justify-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+            <div className="absolute inset-x-0 bottom-12 flex justify-center gap-1.5 opacity-0 transition-opacity group-hover/card:opacity-100">
               {images.map((_, idx) => (
                 <div
                   key={idx}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    currentImageIdx === idx ? 'bg-primary w-3' : 'bg-white/50'
+                  className={`h-1.5 w-1.5 rounded-full transition-all ${
+                    activeImageIndex === idx ? 'bg-primary w-3' : 'bg-white/50'
                   }`}
                 />
               ))}
@@ -117,7 +133,7 @@ const ProductCard = ({ product }: { product: Product }) => {
         <button
           onClick={handleAddToCart}
           disabled={product.countInStock === 0}
-          className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-[#1c1c1c] py-3 text-[12px] uppercase tracking-[0.18em] text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:bg-[#777]"
+          className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-[#1c1c1c] py-3 text-[12px] uppercase tracking-[0.18em] text-white opacity-0 transition-opacity group-hover/card:opacity-100 disabled:bg-[#777]"
         >
           <ShoppingBag size={14} />
           Choose options

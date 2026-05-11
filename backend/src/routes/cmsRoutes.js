@@ -6,6 +6,16 @@ const router = express.Router();
 
 const mapProduct = (p) => {
   if (!p) return null;
+  const gallery = (p.product_images || p.images || [])
+    .slice()
+    .sort((a, b) => {
+      if (a?.is_main && !b?.is_main) return -1;
+      if (!a?.is_main && b?.is_main) return 1;
+      return (a?.display_order || 0) - (b?.display_order || 0);
+    })
+    .map((image) => (typeof image === 'string' ? image : image?.image_url))
+    .filter(Boolean);
+
   return {
     _id: p.id,
     id: p.id,
@@ -13,7 +23,8 @@ const mapProduct = (p) => {
     slug: p.slug,
     price: p.price,
     discountPrice: p.discount_price,
-    image: p.images?.[0]?.image_url || p.image_url,
+    image: gallery[0] || p.image_url,
+    images: gallery,
     brand: 'Lotus & Lion',
     category: p.category,
     countInStock: p.stock_quantity,
@@ -42,7 +53,7 @@ router.get('/site', async (req, res, next) => {
 
       // 2. Fetch products in parallel using identified IDs
       // We only select the fields needed for the homepage to keep the payload small
-      const productSelect = 'id, name, slug, price, discount_price, category, stock_quantity, is_featured, collection_id, product_images(image_url, is_main)';
+      const productSelect = 'id, name, slug, price, discount_price, category, stock_quantity, is_featured, collection_id, product_images(image_url, is_main, display_order)';
       
       const [
         { data: featuredProducts },
@@ -67,9 +78,9 @@ router.get('/site', async (req, res, next) => {
         theme: findContent('theme'),
         settings: findContent('settings'),
         blogs: [], 
-        featuredProducts: (featuredProducts || []).map(p => mapProduct({ ...p, images: p.product_images })),
-        lotusProducts: (lotusProducts || []).map(p => mapProduct({ ...p, images: p.product_images })),
-        lionProducts: (lionProducts || []).map(p => mapProduct({ ...p, images: p.product_images }))
+        featuredProducts: (featuredProducts || []).map(mapProduct),
+        lotusProducts: (lotusProducts || []).map(mapProduct),
+        lionProducts: (lionProducts || []).map(mapProduct)
       };
     }, 60); // 60 second cache
     // Set Cache-Control header for Vercel Edge Caching

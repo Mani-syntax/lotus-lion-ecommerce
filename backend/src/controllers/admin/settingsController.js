@@ -37,7 +37,7 @@ const getSettings = async (req, res, next) => {
 const updateSettings = async (req, res, next) => {
   try {
     const { siteMeta } = req.body;
-    const metaValue = siteMeta?.value || {};
+    const metaValue = siteMeta?.value || siteMeta || {};
     
     const settingsData = {
       site_name: metaValue.name || 'Lotus & Lion',
@@ -65,6 +65,7 @@ const updateSettings = async (req, res, next) => {
 
     // Invalidate cache after successful update
     await flush('settings:*');
+    await flush('content:*');
     
     // Return the updated formatted settings
     const formatted = {

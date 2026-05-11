@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import api from '@/lib/api';
@@ -8,18 +8,31 @@ import toast from 'react-hot-toast';
 import { CreditCard, Truck, ShieldCheck, ArrowRight } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
 
+type CartAvailability = {
+  available: boolean;
+  stock: number;
+  message?: string;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, userInfo, clearCart } = useStore();
-  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
+  const safeCartItems = useMemo(() => Array.isArray(cartItems) ? cartItems : [], [cartItems]);
   
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('');
   const [loading, setLoading] = useState(false);
+  const [availability, setAvailability] = useState<Record<string, CartAvailability>>({});
+  const [checkingStock, setCheckingStock] = useState(true);
 
-  const subtotal = safeCartItems.reduce((acc, item) => acc + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
+  const unavailableItems = safeCartItems.filter((item) => availability[item.product]?.available === false);
+  const canPlaceOrder = !checkingStock && unavailableItems.length === 0;
+  const subtotal = safeCartItems.reduce((acc, item) => {
+    if (availability[item.product]?.available === false) return acc;
+    return acc + (Number(item.qty) || 0) * (Number(item.price) || 0);
+  }, 0);
 
   useEffect(() => {
     if (!userInfo) {
@@ -30,8 +43,57 @@ export default function CheckoutPage() {
     }
   }, [userInfo, safeCartItems.length, router]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const checkCartStock = async () => {
+      if (safeCartItems.length === 0) {
+        setAvailability({});
+        setCheckingStock(false);
+        return;
+      }
+
+      setCheckingStock(true);
+      const results = await Promise.all(
+        safeCartItems.map(async (item) => {
+          try {
+            const { data } = await api.get(`/products/${item.product}`);
+            const stock = Number(data.countInStock ?? data.stock_quantity ?? 0);
+            const requestedQty = Number(item.qty) || 0;
+            return [item.product, {
+              available: stock > 0 && stock >= requestedQty,
+              stock,
+              message: stock <= 0 ? 'Out of stock' : stock < requestedQty ? `Only ${stock} left` : undefined,
+            }] as const;
+          } catch {
+            return [item.product, {
+              available: false,
+              stock: 0,
+              message: 'No longer available',
+            }] as const;
+          }
+        })
+      );
+
+      if (mounted) {
+        setAvailability(Object.fromEntries(results));
+        setCheckingStock(false);
+      }
+    };
+
+    checkCartStock();
+    return () => {
+      mounted = false;
+    };
+  }, [safeCartItems]);
+
   const placeOrderHandler = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canPlaceOrder) {
+      toast.error('Please remove unavailable or out-of-stock products before checkout');
+      router.push('/cart');
+      return;
+    }
     setLoading(true);
     try {
       const orderData = {
@@ -48,8 +110,11 @@ export default function CheckoutPage() {
       toast.success('Order placed successfully');
       clearCart();
       router.push(`/orders/${data.id}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+    } catch (error: unknown) {
+      const message = typeof error === 'object' && error !== null && 'response' in error
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      toast.error(message || 'Failed to place order');
     } finally {
       setLoading(false);
     }
@@ -133,10 +198,10 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !canPlaceOrder}
                 className="w-full bg-black dark:bg-white text-white dark:text-black py-5 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary dark:hover:bg-primary transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Place Secure Order'}
+                {checkingStock ? 'Checking Stock...' : loading ? 'Processing...' : 'Place Secure Order'}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -152,11 +217,19 @@ export default function CheckoutPage() {
                     <div className="flex-grow">
                       <h4 className="text-[10px] font-bold uppercase tracking-wide truncate w-32">{item.name}</h4>
                       <p className="text-[10px] text-gray-500 uppercase">Qty: {item.qty}</p>
+                      {availability[item.product]?.available === false && (
+                        <p className="text-[10px] font-bold uppercase text-red-600">{availability[item.product]?.message || 'Out of stock'}</p>
+                      )}
                       <p className="text-[10px] font-bold text-primary">{formatINR(item.qty * item.price)}</p>
                     </div>
                   </div>
                 ))}
               </div>
+              {unavailableItems.length > 0 && (
+                <p className="mb-6 bg-red-50 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-red-600">
+                  Some cart products are unavailable. Please return to cart and remove them.
+                </p>
+              )}
               <div className="pt-8 border-t border-border space-y-4">
                 <div className="flex justify-between text-xs tracking-widest uppercase font-bold">
                   <span>Total</span>

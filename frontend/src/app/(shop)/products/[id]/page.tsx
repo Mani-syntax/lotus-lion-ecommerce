@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 import { formatINR } from '@/lib/currency';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ShoppingBag, Truck, ShieldCheck, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingBag, Truck, ShieldCheck, RefreshCw, X } from 'lucide-react';
 
 interface Product {
   _id: string;
@@ -27,6 +27,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const addToCart = useStore((state) => state.addToCart);
 
   const images = product?.images && product.images.length > 0 ? product.images : (product?.image ? [product.image] : []);
@@ -89,7 +90,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Image Gallery */}
           <div className="space-y-6">
-             <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f7] group">
+             <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f7] group cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={activeImageIdx}
@@ -99,20 +100,32 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover hover:brightness-90 transition-all"
                   />
                 </AnimatePresence>
+                
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                  <div className="text-white text-center">
+                    <p className="text-sm font-bold uppercase tracking-widest">Click to expand</p>
+                  </div>
+                </div>
 
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={() => setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                      }}
                       className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                      }}
                       className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -218,6 +231,79 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      <AnimatePresence>
+        {isImageModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsImageModalOpen(false)}
+              className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="relative max-w-4xl max-h-screen w-full h-full flex items-center justify-center">
+                <button
+                  onClick={() => setIsImageModalOpen(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white transition-colors z-10"
+                >
+                  <X className="w-6 h-6 text-black" />
+                </button>
+
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img
+                    src={images[activeImageIdx]}
+                    alt={product.name}
+                    className="max-w-full max-h-[90vh] object-contain"
+                  />
+
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                        }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white rounded-full transition-colors"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white rounded-full transition-colors"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 rounded-full px-4 py-2">
+                        {images.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveImageIdx(idx)}
+                            className={`h-2 rounded-full transition-all ${
+                              activeImageIdx === idx ? 'w-6 bg-white' : 'w-2 bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

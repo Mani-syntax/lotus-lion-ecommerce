@@ -17,6 +17,7 @@ interface Product {
   category: string;
   collectionType: 'lotus' | 'lion' | 'artist';
   countInStock: number;
+  images?: (string | { image_url: string })[];
 }
 
 function ProductsContent() {
@@ -69,7 +70,7 @@ function ProductsContent() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="aspect-[3/4] bg-[#f7f7f7]" />
+                <div className="aspect-[4/5] bg-[#f7f7f7]" />
                 <div className="mx-auto mt-4 h-4 w-2/3 bg-[#f7f7f7]" />
                 <div className="mx-auto mt-2 h-4 w-1/3 bg-[#f7f7f7]" />
               </div>
@@ -78,7 +79,7 @@ function ProductsContent() {
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product._id} product={product} />
             ))}
           </div>
         )}

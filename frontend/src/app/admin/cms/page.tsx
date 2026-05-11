@@ -140,7 +140,7 @@ export default function AdminCMS() {
             <button
               onClick={() => setHomeForm({ 
                 ...homeForm, 
-                slides: [...(homeForm?.slides || []), { title: '', subtitle: '', eyebrow: '', ctaText: 'Shop Now', ctaLink: '/shop', image: '' }] 
+                slides: [...(homeForm?.slides || []), { title: '', subtitle: '', eyebrow: '', ctaText: 'Shop Now', ctaLink: '/shop', image: '', mobileImage: '', desktopObjectPosition: 'center center', mobileObjectPosition: 'center center' }] 
               })}
               className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
             >
@@ -163,7 +163,7 @@ export default function AdminCMS() {
                 </button>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-1 space-y-5">
                     <label className="text-[8px] uppercase font-bold text-gray-500 mb-2 block">Slide Image</label>
                     <ImageUploader
                       multiple={false}
@@ -175,6 +175,20 @@ export default function AdminCMS() {
                         setHomeForm({ ...homeForm, slides: next });
                       }}
                     />
+                    <div>
+                      <label className="text-[8px] uppercase font-bold text-gray-500 mb-2 block">Phone Hero Image</label>
+                      <ImageUploader
+                        multiple={false}
+                        folder="lotus-lion/home/hero-mobile"
+                        existingImages={slide.mobileImage ? [slide.mobileImage] : []}
+                        onUpload={(urls) => {
+                          const next = [...homeForm.slides];
+                          next[index].mobileImage = urls[0];
+                          setHomeForm({ ...homeForm, slides: next });
+                        }}
+                      />
+                      <p className="mt-2 text-[10px] leading-5 text-gray-500">Use a tall mobile crop so the model stays centered on phones.</p>
+                    </div>
                   </div>
                   
                   <div className="md:col-span-2 space-y-4">
@@ -244,6 +258,34 @@ export default function AdminCMS() {
                             setHomeForm({ ...homeForm, slides: next });
                           }}
                           placeholder="/collections/lotus"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Desktop Alignment</label>
+                        <input
+                          value={slide.desktopObjectPosition || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].desktopObjectPosition = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          placeholder="center center"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] uppercase font-bold text-gray-500">Phone Alignment</label>
+                        <input
+                          value={slide.mobileObjectPosition || ''}
+                          onChange={(e) => {
+                            const next = [...homeForm.slides];
+                            next[index].mobileObjectPosition = e.target.value;
+                            setHomeForm({ ...homeForm, slides: next });
+                          }}
+                          placeholder="center center"
                           className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none font-mono"
                         />
                       </div>

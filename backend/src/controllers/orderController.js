@@ -44,15 +44,20 @@ const addOrderItems = async (req, res, next) => {
     for (const item of orderItems) {
       const { data: product, error: pError } = await supabase
         .from('products')
-        .select('id, name, stock_quantity')
+        .select('id, name, stock_quantity, is_visible')
         .eq('id', item.product)
         .single();
       
-      if (pError || !product) {
+      if (pError || !product || !product.is_visible) {
         res.status(404);
-        throw new Error(`Product not found: ${item.name}`);
+        throw new Error(`${item.name} is no longer available. Please remove it from your cart.`);
       }
       
+      if (product.stock_quantity <= 0) {
+        res.status(400);
+        throw new Error(`${product.name} is out of stock. Please remove it from your cart.`);
+      }
+
       if (product.stock_quantity < item.qty) {
         res.status(400);
         throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock_quantity}`);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -12,6 +12,9 @@ interface Slide {
   ctaText?: string;
   ctaLink?: string;
   image?: string;
+  mobileImage?: string;
+  desktopObjectPosition?: string;
+  mobileObjectPosition?: string;
 }
 
 interface HeroSliderProps {
@@ -22,26 +25,26 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  useEffect(() => {
-    if (!slides || slides.length === 0) return;
-    
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [current, slides]);
-
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     if (!slides || slides.length === 0) return;
     setDirection(1);
     setCurrent((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-  };
+  }, [slides]);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     if (!slides || slides.length === 0) return;
     setDirection(-1);
     setCurrent((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
-  };
+  }, [slides]);
+
+  useEffect(() => {
+    if (!slides || slides.length === 0) return;
+
+    const timer = window.setInterval(() => {
+      nextSlide();
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [nextSlide, slides]);
 
   if (!slides || slides.length === 0) {
     return (
@@ -73,7 +76,7 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
   if (!slide) return null;
 
   return (
-    <section className="relative h-[60vh] sm:h-[72vh] min-h-[400px] sm:min-h-[560px] overflow-hidden border-b border-[#dddddd] bg-[#f7f7f7]">
+    <section className="relative h-[72vh] min-h-[620px] overflow-hidden border-b border-[#dddddd] bg-[#f7f7f7] sm:h-[72vh] sm:min-h-[560px]">
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={current}
@@ -89,23 +92,32 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
           className="absolute inset-0"
         >
           {slide.image ? (
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+            <>
+              <img
+                src={slide.image}
+                alt={slide.title}
+                style={{ objectPosition: slide.desktopObjectPosition || 'center center' }}
+                className="absolute inset-0 hidden h-full w-full object-cover sm:block"
+              />
+              <img
+                src={slide.mobileImage || slide.image}
+                alt={slide.title}
+                style={{ objectPosition: slide.mobileObjectPosition || 'center center' }}
+                className="absolute inset-0 h-full w-full object-cover sm:hidden"
+              />
+            </>
           ) : (
             <div className="hero-editorial absolute inset-0" />
           )}
-          <div className="absolute inset-0 bg-[#1c1c1c]/30" />
+          <div className="absolute inset-0 bg-[#1c1c1c]/25" />
           
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-8 sm:px-12 text-center text-white">
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-8 text-center text-white sm:px-12">
             <div className="max-w-4xl">
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="mb-4 text-[10px] sm:text-[13px] uppercase tracking-[0.32em]"
+                className="mb-3 text-[12px] uppercase tracking-[0.28em] sm:mb-4 sm:text-[13px] sm:tracking-[0.32em]"
               >
                 {slide.eyebrow}
               </motion.p>
@@ -113,7 +125,7 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-2xl font-light uppercase tracking-[0.20em] sm:text-5xl md:text-7xl leading-tight sm:tracking-[0.24em]"
+                className="brand-heading text-5xl leading-none sm:text-6xl md:text-7xl"
               >
                 {slide.title}
               </motion.h1>
@@ -121,7 +133,7 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="mx-auto mt-5 max-w-2xl text-[12px] sm:text-sm leading-relaxed sm:leading-7 opacity-90"
+                className="mx-auto mt-4 max-w-2xl text-[12px] leading-relaxed opacity-90 sm:mt-5 sm:text-sm sm:leading-7"
               >
                 {slide.subtitle}
               </motion.p>
@@ -132,7 +144,7 @@ const HeroSlider = ({ slides = [] }: HeroSliderProps) => {
               >
                 <Link
                   href={slide.ctaLink || '/products'}
-                  className="mt-8 inline-flex bg-white px-8 sm:px-12 py-3 sm:py-4 text-[10px] sm:text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:bg-[#1c1c1c] hover:text-white transition-colors"
+                  className="mt-8 inline-flex rounded-full bg-black px-10 py-4 text-[13px] uppercase tracking-[0.08em] text-white transition-colors hover:bg-white hover:text-[#1c1c1c] sm:px-12 sm:text-[12px] sm:tracking-[0.18em]"
                 >
                   {slide.ctaText || 'Shop Now'}
                 </Link>

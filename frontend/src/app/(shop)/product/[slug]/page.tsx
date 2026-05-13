@@ -83,44 +83,45 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 lg:gap-16">
           {/* Images */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
+            className="flex flex-col"
           >
-            <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+            <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden mb-6" style={{ aspectRatio: '3/4' }}>
               {product.images?.[selectedImage] ? (
                 <Image
                   src={product.images[selectedImage].image_url}
                   alt={product.name}
                   fill
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                   priority
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
                 />
               ) : (
                 <Image
                   src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000"
                   alt="Placeholder"
                   fill
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                 />
               )}
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-3">
               {product.images?.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImage(idx)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 relative ${
-                    idx === selectedImage ? 'border-black' : 'border-gray-300'
-                  }`}
+                  className={`rounded-lg overflow-hidden border-2 relative transition-all ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
+                  style={{ aspectRatio: '3/4' }}
                 >
                   <Image
                     src={img.image_url}
                     alt={`${product.name} ${idx}`}
                     fill
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                 </button>
               ))}
@@ -131,41 +132,42 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
+            className="lg:sticky lg:top-8 lg:h-fit"
           >
-            <h1 className="text-4xl font-bold text-black mb-2">{product.name}</h1>
-            <p className="text-gray-600 mb-6">
-              Collection: {product.collection?.name}
+            <h1 className="text-5xl lg:text-6xl font-bold text-black mb-3">{product.name}</h1>
+            <p className="text-lg text-gray-600 mb-8">
+              Collection: <span className="font-semibold text-black">{product.collection?.name}</span>
             </p>
 
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-4xl font-bold text-black">
+            <div className="flex items-center gap-4 mb-8">
+              <span className="text-5xl font-bold text-black">
                 ₹{product.discount_price || product.price}
               </span>
               {product.discount_price && (
-                <span className="text-xl text-gray-500 line-through">
+                <span className="text-2xl text-gray-500 line-through">
                   ₹{product.price}
                 </span>
               )}
             </div>
 
             <div 
-              className="text-gray-700 mb-8 prose prose-sm max-w-none"
+              className="text-gray-700 mb-10 prose prose-lg max-w-none"
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
 
             {/* Sizes */}
             {sizes.length > 0 && (
-              <div className="mb-6">
-                <label className="block text-sm font-bold mb-2">Size</label>
-                <div className="flex gap-2">
+              <div className="mb-8">
+                <label className="block text-base font-bold mb-3">Size</label>
+                <div className="flex gap-3 flex-wrap">
                   {sizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 border-2 rounded-lg transition ${
+                      className={`px-6 py-3 border-2 rounded-lg transition text-base font-medium ${
                         selectedSize === size
                           ? 'border-black bg-black text-white'
-                          : 'border-gray-300 text-black'
+                          : 'border-gray-300 text-black hover:border-black'
                       }`}
                     >
                       {size}
@@ -177,17 +179,17 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
             {/* Colors */}
             {colors.length > 0 && (
-              <div className="mb-6">
-                <label className="block text-sm font-bold mb-2">Color</label>
-                <div className="flex gap-2">
+              <div className="mb-8">
+                <label className="block text-base font-bold mb-3">Color</label>
+                <div className="flex gap-3 flex-wrap">
                   {colors.map((color) => (
                     <button
                       key={color}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-4 py-2 border-2 rounded-lg transition ${
+                      className={`px-6 py-3 border-2 rounded-lg transition text-base font-medium ${
                         selectedColor === color
                           ? 'border-black bg-black text-white'
-                          : 'border-gray-300 text-black'
+                          : 'border-gray-300 text-black hover:border-black'
                       }`}
                     >
                       {color}
@@ -198,23 +200,23 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             )}
 
             {/* Quantity */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold mb-2">Quantity</label>
+            <div className="mb-8">
+              <label className="block text-base font-bold mb-3">Quantity</label>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                  className="px-5 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 text-xl font-bold"
                 >
                   −
                 </button>
-                <span className="text-xl font-bold">{quantity}</span>
+                <span className="text-2xl font-bold min-w-12 text-center">{quantity}</span>
                 <button
                   onClick={() =>
                     setQuantity(
                       Math.min(product.stock_quantity, quantity + 1)
                     )
                   }
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                  className="px-5 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 text-xl font-bold"
                 >
                   +
                 </button>
@@ -222,11 +224,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
 
             {/* Stock */}
-            <div className="mb-8">
+            <div className="mb-10">
               {product.stock_quantity > 0 ? (
-                <p className="text-green-600 font-bold">In Stock</p>
+                <p className="text-lg text-green-600 font-bold">✓ In Stock</p>
               ) : (
-                <p className="text-red-600 font-bold">Out of Stock</p>
+                <p className="text-lg text-red-600 font-bold">Out of Stock</p>
               )}
             </div>
 
@@ -234,7 +236,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <button
               onClick={handleAddToCart}
               disabled={product.stock_quantity === 0}
-              className="w-full bg-black text-white py-4 rounded-lg font-bold text-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white py-5 rounded-lg font-bold text-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add to Cart
             </button>

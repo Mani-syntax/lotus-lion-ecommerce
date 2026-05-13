@@ -81,41 +81,45 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const colors = [...new Set(product.variants?.map((v) => v.color) || [])];
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto px-0 py-0 lg:py-0">
-        <div className="grid grid-cols-1 lg:grid-cols-[3fr_1.2fr] gap-0 lg:gap-0 min-h-screen">
+    <div className="bg-white">
+      <div className="mx-auto px-0 py-0">
+        <div className="grid grid-cols-1 lg:grid-cols-[75%_25%] gap-0 lg:min-h-screen">
           {/* Images */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex flex-col bg-gray-50"
+            className="flex flex-col bg-white lg:sticky lg:top-0"
           >
-            <div className="relative w-full bg-gray-100 overflow-hidden flex-1 flex items-center justify-center" style={{ aspectRatio: '3/4', minHeight: '100vh' }}>
+            <div className="relative w-full bg-white flex items-center justify-center py-12 lg:py-0 px-4 lg:flex-1 lg:h-screen">
               {product.images?.[selectedImage] ? (
-                <Image
-                  src={product.images[selectedImage].image_url}
-                  alt={product.name}
-                  fill
-                  className="object-contain w-full h-full"
-                  priority
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
-                />
+                <div className="relative w-full max-w-xl lg:max-w-2xl h-auto" style={{ aspectRatio: '3/4' }}>
+                  <Image
+                    src={product.images[selectedImage].image_url}
+                    alt={product.name}
+                    fill
+                    className="object-contain"
+                    priority
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 70vw"
+                  />
+                </div>
               ) : (
-                <Image
-                  src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000"
-                  alt="Placeholder"
-                  fill
-                  className="object-cover w-full h-full"
-                />
+                <div className="relative w-full max-w-xl lg:max-w-2xl h-auto" style={{ aspectRatio: '3/4' }}>
+                  <Image
+                    src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000"
+                    alt="Placeholder"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-2 md:gap-3 bg-gray-50 p-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 bg-white border-t border-gray-100 py-4 px-4 lg:px-6 overflow-x-auto lg:overflow-x-visible">
               {product.images?.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImage(idx)}
-                  className={`rounded-lg overflow-hidden border-2 relative transition-all h-24 md:h-28 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
-                  style={{ aspectRatio: '3/4' }}
+                  className={`rounded-lg overflow-hidden border-2 relative transition-all flex-shrink-0 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
+                  style={{ aspectRatio: '3/4', minWidth: 'calc(33.33% - 6px)' }}
                 >
                   <Image
                     src={img.image_url}
@@ -132,9 +136,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="overflow-y-auto px-6 md:px-8 py-8 md:py-12 bg-white"
+            className="overflow-y-auto px-6 md:px-8 py-8 md:py-12 bg-white border-l border-gray-100"
           >
-            <div className="space-y-6">
+            <div className="space-y-8 max-w-sm">
               <h1 className="text-4xl md:text-5xl font-bold text-black mb-2">{product.name}</h1>
               <p className="text-base text-gray-600">
                 Collection: <span className="font-semibold text-black">{product.collection?.name}</span>

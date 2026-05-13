@@ -92,8 +92,8 @@ export default function ImageUploader({ onUpload, existingImages = [], multiple 
       {images.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
           {images.map((url, idx) => (
-            <div key={idx} className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-white/5 border border-white/10">
-              <img src={url} alt="" className="w-full h-full object-cover" />
+            <div key={idx} className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-white flex items-center justify-center border border-white/10">
+              <img src={url} alt="" className="w-full h-full object-contain" />
               <button 
                 onClick={() => removeImage(url)}
                 className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"

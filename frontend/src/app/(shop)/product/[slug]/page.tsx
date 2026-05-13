@@ -82,21 +82,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-6 lg:gap-12 max-w-[1600px] mx-auto">
+      <div className="mx-auto px-0 py-0 lg:py-0">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_1.2fr] gap-0 lg:gap-0 min-h-screen">
           {/* Images */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex flex-col"
+            className="flex flex-col bg-gray-50"
           >
-            <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden mb-8 h-screen max-h-[800px]" style={{ aspectRatio: '3/4' }}>
+            <div className="relative w-full bg-gray-100 overflow-hidden flex-1 flex items-center justify-center" style={{ aspectRatio: '3/4', minHeight: '100vh' }}>
               {product.images?.[selectedImage] ? (
                 <Image
                   src={product.images[selectedImage].image_url}
                   alt={product.name}
                   fill
-                  className="object-cover w-full h-full"
+                  className="object-contain w-full h-full"
                   priority
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
                 />
@@ -109,12 +109,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 />
               )}
             </div>
-            <div className="grid grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-4 gap-2 md:gap-3 bg-gray-50 p-4">
               {product.images?.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImage(idx)}
-                  className={`rounded-lg overflow-hidden border-2 relative transition-all h-28 md:h-32 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
+                  className={`rounded-lg overflow-hidden border-2 relative transition-all h-24 md:h-28 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
                   style={{ aspectRatio: '3/4' }}
                 >
                   <Image
@@ -132,9 +132,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:sticky lg:top-12 lg:h-fit space-y-6"
+            className="overflow-y-auto px-6 md:px-8 py-8 md:py-12 bg-white"
           >
-            <div>
+            <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl font-bold text-black mb-2">{product.name}</h1>
               <p className="text-base text-gray-600">
                 Collection: <span className="font-semibold text-black">{product.collection?.name}</span>

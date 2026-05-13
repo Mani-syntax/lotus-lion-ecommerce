@@ -82,15 +82,15 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 lg:gap-16">
+      <div className="mx-auto px-4 py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-6 lg:gap-12 max-w-[1600px] mx-auto">
           {/* Images */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-            <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden mb-6" style={{ aspectRatio: '3/4' }}>
+            <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden mb-8 h-screen max-h-[800px]" style={{ aspectRatio: '3/4' }}>
               {product.images?.[selectedImage] ? (
                 <Image
                   src={product.images[selectedImage].image_url}
@@ -109,12 +109,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 />
               )}
             </div>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-4 gap-3 md:gap-4">
               {product.images?.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImage(idx)}
-                  className={`rounded-lg overflow-hidden border-2 relative transition-all ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
+                  className={`rounded-lg overflow-hidden border-2 relative transition-all h-28 md:h-32 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
                   style={{ aspectRatio: '3/4' }}
                 >
                   <Image
@@ -132,12 +132,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:sticky lg:top-8 lg:h-fit"
+            className="lg:sticky lg:top-12 lg:h-fit space-y-6"
           >
-            <h1 className="text-5xl lg:text-6xl font-bold text-black mb-3">{product.name}</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Collection: <span className="font-semibold text-black">{product.collection?.name}</span>
-            </p>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-black mb-2">{product.name}</h1>
+              <p className="text-base text-gray-600">
+                Collection: <span className="font-semibold text-black">{product.collection?.name}</span>
+              </p>
+            </div>
 
             <div className="flex items-center gap-4 mb-8">
               <span className="text-5xl font-bold text-black">

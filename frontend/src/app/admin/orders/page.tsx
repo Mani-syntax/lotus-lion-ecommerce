@@ -190,7 +190,7 @@ export default function AdminOrders() {
               <div className="space-y-4">
                 {selectedOrder.orderItems.map((item: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                    <img src={item.image} alt="" className="w-12 h-16 object-cover rounded bg-white/5" />
+                    <img src={item.image} alt="" className="w-12 h-20 object-contain rounded bg-white/5" />
                     <div className="flex-grow">
                       <p className="text-[10px] font-bold uppercase text-white">{item.name}</p>
                       <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Qty: {item.qty} | Size: {item.size || 'N/A'}</p>

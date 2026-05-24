@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
+import type { TouchEvent } from 'react';
 import { productsService } from '@/lib/services/productsService';
 import { useStore } from '@/store/useStore';
 import { motion } from 'framer-motion';
@@ -29,6 +30,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const touchStartX = useRef<number | null>(null);
   const addToCart = useStore((state) => state.addToCart);
 
   useEffect(() => {
@@ -61,6 +63,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     toast.success('Added to cart!');
   };
 
+  const handleImageTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const handleImageTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    if (!product?.images || product.images.length < 2 || touchStartX.current === null) return;
+
+    const deltaX = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    touchStartX.current = null;
+
+    if (Math.abs(deltaX) < 40) return;
+
+    setSelectedImage((prev) => {
+      if (deltaX < 0) return prev === product.images.length - 1 ? 0 : prev + 1;
+      return prev === 0 ? product.images.length - 1 : prev - 1;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -90,9 +110,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col bg-white lg:sticky lg:top-0"
           >
-            <div className="relative w-full bg-white flex items-center justify-center py-12 lg:py-0 px-4 lg:flex-1 lg:h-screen">
+            <div
+              className="relative w-full bg-white flex items-center justify-center py-8 lg:py-10 px-4 lg:flex-1 lg:min-h-screen"
+              onTouchStart={handleImageTouchStart}
+              onTouchEnd={handleImageTouchEnd}
+            >
               {product.images?.[selectedImage] ? (
-                <div className="relative w-full max-w-xl lg:max-w-2xl h-auto" style={{ aspectRatio: '3/4' }}>
+                <div className="relative h-[min(78vh,980px)] min-h-[620px] w-full max-w-[560px]">
                   <Image
                     src={product.images[selectedImage].image_url}
                     alt={product.name}
@@ -103,7 +127,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   />
                 </div>
               ) : (
-                <div className="relative w-full max-w-xl lg:max-w-2xl h-auto" style={{ aspectRatio: '3/4' }}>
+                <div className="relative h-[min(78vh,980px)] min-h-[620px] w-full max-w-[560px]">
                   <Image
                     src="https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&q=80&w=1000"
                     alt="Placeholder"
@@ -113,19 +137,18 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-2 md:gap-3 bg-white border-t border-gray-100 py-4 px-4 lg:px-6 overflow-x-auto lg:overflow-x-visible">
+            <div className="flex gap-3 bg-white border-t border-gray-100 py-4 px-4 lg:px-6 overflow-x-auto">
               {product.images?.map((img, idx) => (
                 <button
                   key={img.id}
                   onClick={() => setSelectedImage(idx)}
-                  className={`rounded-lg overflow-hidden border-2 relative transition-all flex-shrink-0 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
-                  style={{ aspectRatio: '3/4', minWidth: 'calc(33.33% - 6px)' }}
+                  className={`relative h-28 w-20 flex-shrink-0 overflow-hidden border-2 bg-white transition-all md:h-32 md:w-24 ${ idx === selectedImage ? 'border-black shadow-lg' : 'border-gray-300 hover:border-gray-400'}`}
                 >
                   <Image
                     src={img.image_url}
                     alt={`${product.name} ${idx}`}
                     fill
-                    className="object-cover w-full h-full"
+                    className="object-contain w-full h-full"
                   />
                 </button>
               ))}

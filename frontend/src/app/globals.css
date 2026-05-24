@@ -146,6 +146,18 @@ textarea {
   color: #1c1c1c;
 }
 
+.lotus-symbol.hidden,
+.lion-symbol.hidden {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .lotus-symbol.md\:inline-grid,
+  .lion-symbol.md\:inline-grid {
+    display: inline-grid;
+  }
+}
+
 .lotus-symbol svg,
 .lion-symbol svg {
   width: 1rem;
@@ -183,8 +195,10 @@ textarea {
   /* Clear Picture Sizes */
   img {
     max-width: 100%;
-    height: auto;
-    object-fit: cover;
+  }
+
+  .brand-heading {
+    letter-spacing: 0.08em;
   }
 }
 

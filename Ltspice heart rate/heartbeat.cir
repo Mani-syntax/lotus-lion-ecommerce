@@ -1,0 +1,39 @@
+* Heartbeat Monitoring Circuit
+
+* Power Supplies
+V1 Vp 0 DC 5
+V2 Vn 0 DC -5
+
+* IR LED Section
+R1 Vp N1 470
+D1 N1 0 D
+.model D D
+
+* Phototransistor Model (IMPORTANT FIX)
+R2 Vp N2 1.5k
+I1 N2 0 SINE(0 1u 1.2)
+
+* Coupling Capacitor
+C1 N2 N3 47u
+
+* First Amplifier
+R3 N4 N3 10k
+E1 N4 0 0 N3 100k
+
+* Filter Stage
+R4 N4 N5 47k
+C2 N5 0 1u
+
+* Buffer
+E2 N6 0 N5 0 1
+
+* Final Amplifier
+R5 N6 N7 10k
+R6 N8 N7 1Meg
+C3 N8 N7 1u
+E3 N8 0 0 N7 100k
+
+* Simulation Command
+.tran 0 10
+
+.end

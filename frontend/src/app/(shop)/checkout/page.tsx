@@ -213,7 +213,7 @@ export default function CheckoutPage() {
               <div className="space-y-4 max-h-60 overflow-y-auto pr-2 mb-8">
                 {safeCartItems.map((item) => (
                   <div key={item.product} className="flex gap-4">
-                    <img src={item.image} alt={item.name} className="w-12 h-16 object-cover bg-white" />
+                    <img src={item.image} alt={item.name} className="w-12 h-20 object-contain bg-white" />
                     <div className="flex-grow">
                       <h4 className="text-[10px] font-bold uppercase tracking-wide truncate w-32">{item.name}</h4>
                       <p className="text-[10px] text-gray-500 uppercase">Qty: {item.qty}</p>

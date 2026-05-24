@@ -92,7 +92,7 @@ export default function CartPage() {
               {safeCartItems.map((item) => (
                 <div key={item.product} className={`flex gap-6 pb-8 border-b border-border ${availability[item.product]?.available === false ? 'opacity-70' : ''}`}>
                   <div className="w-24 h-32 md:w-32 md:h-44 bg-secondary flex-shrink-0">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-grow flex flex-col justify-between py-2">
                     <div>

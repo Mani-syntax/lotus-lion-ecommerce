@@ -53,7 +53,7 @@ export default function AdminProducts() {
       header: 'Product',
       accessor: (item: any) => (
         <div className="flex items-center gap-4">
-          <img src={item.image} className="w-10 h-12 object-cover rounded bg-white/5" alt="" />
+          <img src={item.image} className="w-10 h-16 object-contain rounded bg-white/5" alt="" />
           <div>
             <p className="text-[10px] font-bold uppercase text-white truncate w-40">{item.name}</p>
             <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold">{item.category}</p>

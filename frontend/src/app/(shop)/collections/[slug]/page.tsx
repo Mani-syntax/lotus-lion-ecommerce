@@ -5,6 +5,7 @@ import { collectionsService } from '@/lib/services/collectionsService';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatINR } from '@/lib/currency';
 
 interface Product {
   id: string;
@@ -76,7 +77,7 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative h-screen max-h-[90vh] bg-gray-900 overflow-hidden flex items-center justify-center"
+        className="relative hidden h-screen max-h-[90vh] bg-gray-900 overflow-hidden md:flex items-center justify-center"
       >
         {/* Background Image */}
         {(collection.hero?.image || collection.banner_url) && (
@@ -143,12 +144,12 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
       </motion.div>
 
       {/* Description */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
+      <div className="max-w-7xl mx-auto px-5 py-12 md:px-6 md:py-16">
         {collection.description && (
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-gray-700 text-lg mb-12 max-w-3xl"
+            className="mb-12 hidden max-w-3xl text-lg text-gray-700 md:block"
           >
             {collection.description}
           </motion.p>
@@ -156,8 +157,8 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
 
         {/* Products Grid */}
         <div id="products" className="scroll-mt-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-black mb-12">Collection Items</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <h2 className="mb-10 hidden text-3xl font-bold text-black md:block md:text-4xl">Collection Items</h2>
+          <div className="grid grid-cols-2 gap-x-10 gap-y-14 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
             {collection.products?.map((product, index) => (
               <motion.div
                 key={product.id}
@@ -167,23 +168,23 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                 className="group"
               >
                 <Link href={`/product/${product.slug}`}>
-                  <div className="relative overflow-hidden bg-gray-100 rounded-lg mb-6" style={{ aspectRatio: '3/4' }}>
+                  <div className="relative mb-4 overflow-hidden bg-white md:mb-6" style={{ aspectRatio: '9/16' }}>
                     {product.images?.[0]?.image_url && (
                       <Image
                         src={product.images[0].image_url}
                         alt={product.name}
                         fill
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain w-full h-full transition-transform duration-300 md:group-hover:scale-[1.02]"
                       />
                     )}
                     {product.is_featured && (
-                      <div className="absolute top-3 right-3 bg-black text-white px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest">
+                      <div className="absolute right-2 top-2 bg-black px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-white md:right-3 md:top-3 md:px-4 md:py-2 md:text-sm">
                         Featured
                       </div>
                     )}
                   </div>
-                  <h3 className="text-lg font-bold text-black mb-2 group-hover:text-gray-700 transition-colors">{product.name}</h3>
-                  <p className="text-xl font-bold text-black">₹{product.price}</p>
+                  <h3 className="mb-2 text-[17px] font-normal leading-snug text-black transition-colors group-hover:text-gray-700 md:text-lg md:font-bold">{product.name}</h3>
+                  <p className="text-[15px] text-[#777] md:text-xl md:font-bold md:text-black">{formatINR(product.price)}</p>
                 </Link>
               </motion.div>
             ))}

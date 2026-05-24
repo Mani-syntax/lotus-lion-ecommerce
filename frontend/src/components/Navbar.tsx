@@ -55,8 +55,8 @@ const Navbar = () => {
         </div>
       )}
       <div className="border-b border-[#dddddd]">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-8">
-          <div className="grid grid-cols-3 items-center h-20">
+        <div className="mx-auto max-w-[1440px] px-3 sm:px-8">
+          <div className="grid h-20 grid-cols-[44px_minmax(0,1fr)_86px] items-center md:h-20 md:grid-cols-3">
             {/* Left Section: Menu */}
             <div className="flex items-center">
               <button
@@ -64,7 +64,7 @@ const Navbar = () => {
                 className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] md:hidden"
                 aria-label="Open menu"
               >
-                <Menu size={20} /> <span className="hidden xs:inline">Menu</span>
+                <Menu size={31} strokeWidth={1.8} /> <span className="hidden">Menu</span>
               </button>
 
               <nav className="hidden items-center gap-7 md:flex">
@@ -81,15 +81,15 @@ const Navbar = () => {
             <div className="flex justify-center">
               <Link href="/" className="flex items-center gap-2 sm:gap-3 text-center">
                 <span className="lotus-symbol hidden md:inline-grid" aria-hidden="true"><Flower2 /></span>
-                <span className="brand-heading block text-base sm:text-2xl uppercase whitespace-nowrap">Lotus & Lion</span>
+                <span className="brand-heading block whitespace-nowrap text-[22px] uppercase sm:text-2xl">Lotus & Lion</span>
                 <span className="lion-symbol hidden md:inline-grid" aria-hidden="true"><Crown /></span>
               </Link>
             </div>
 
             {/* Right Section: Icons */}
             <div className="flex items-center justify-end gap-3 sm:gap-5">
-              <Link href="/products" aria-label="Search" className="hidden xs:block">
-                <Search size={19} />
+              <Link href="/products" aria-label="Search">
+                <Search size={28} strokeWidth={1.8} className="md:h-[19px] md:w-[19px]" />
               </Link>
               <Link href="/wishlist" aria-label="Wishlist" className="hidden sm:block">
                 <Heart size={19} />
@@ -97,11 +97,11 @@ const Navbar = () => {
               {userInfo ? (
                 <>
                   {isAdmin && (
-                    <Link href="/admin" aria-label="Admin portal" className="hidden xs:block">
+                    <Link href="/admin" aria-label="Admin portal" className="hidden md:block">
                       <Shield size={19} />
                     </Link>
                   )}
-                  <Link href={isAdmin ? "/admin" : "/"} aria-label="Account">
+                  <Link href={isAdmin ? "/admin" : "/"} aria-label="Account" className="hidden md:block">
                     <User size={19} className={isAdmin ? "text-primary" : ""} />
                   </Link>
                   <button onClick={logoutHandler} aria-label="Logout" className="hidden sm:block">
@@ -109,12 +109,12 @@ const Navbar = () => {
                   </button>
                 </>
               ) : (
-                <Link href="/login" aria-label="Account">
+                <Link href="/login" aria-label="Account" className="hidden md:block">
                   <User size={19} />
                 </Link>
               )}
               <Link href="/cart" className="relative" aria-label="Cart">
-                <ShoppingBag size={20} />
+                <ShoppingBag size={28} strokeWidth={1.8} className="md:h-5 md:w-5" />
                 {cartCount > 0 && (
                   <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center bg-[#df0029] px-1 text-[9px] font-bold text-white">
                     {cartCount}

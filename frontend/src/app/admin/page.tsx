@@ -129,7 +129,7 @@ export default function AdminDashboard() {
             {stats?.lowStockProducts?.length > 0 ? (
               stats.lowStockProducts.map((product: any, idx: number) => (
                 <div key={product.id || `low-stock-${idx}`} className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/5 group hover:border-red-500/30 transition-all">
-                  <img src={product.image} className="w-10 h-12 object-cover rounded" alt="" />
+                  <img src={product.image} className="w-10 h-16 object-contain rounded bg-white/5" alt="" />
                   <div className="flex-grow">
                     <p className="text-[10px] font-bold uppercase text-white truncate w-32">{product.name}</p>
                     <p className="text-[8px] uppercase text-gray-500 font-bold tracking-widest">{product.category}</p>
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
            <div className="space-y-6">
               {stats?.topSellingProducts?.map((product: any, idx: number) => (
                 <div key={product.id || `top-seller-${idx}`} className="flex gap-4 items-center">
-                  <img src={product.image} className="w-12 h-16 object-cover bg-white/5 rounded" alt="" />
+                  <img src={product.image} className="w-12 h-20 object-contain bg-white/5 rounded" alt="" />
                   <div className="flex-grow">
                     <h4 className="text-[10px] font-bold uppercase tracking-wide text-white">{product.name}</h4>
                     <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">{formatINR(product.price)}</p>

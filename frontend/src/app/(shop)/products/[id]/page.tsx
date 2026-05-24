@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
+import type { TouchEvent } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useStore } from '@/store/useStore';
@@ -28,6 +29,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [qty, setQty] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
   const addToCart = useStore((state) => state.addToCart);
 
   const images = product?.images && product.images.length > 0 ? product.images : (product?.image ? [product.image] : []);
@@ -60,6 +62,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     toast.success('Added to bag');
   };
 
+  const handleImageTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const handleImageTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    if (images.length < 2 || touchStartX.current === null) return;
+
+    const deltaX = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    touchStartX.current = null;
+
+    if (Math.abs(deltaX) < 40) return;
+
+    setActiveImageIdx((prev) => {
+      if (deltaX < 0) return prev === images.length - 1 ? 0 : prev + 1;
+      return prev === 0 ? images.length - 1 : prev - 1;
+    });
+  };
+
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white">
       <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
@@ -90,7 +110,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Image Gallery */}
           <div className="space-y-6">
-             <div className="relative aspect-[4/5] overflow-hidden bg-[#f7f7f7] group cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
+             <div
+               className="relative aspect-[9/16] overflow-hidden bg-white group cursor-pointer"
+               onClick={() => setIsImageModalOpen(true)}
+               onTouchStart={handleImageTouchStart}
+               onTouchEnd={handleImageTouchEnd}
+             >
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={activeImageIdx}
@@ -100,7 +125,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="h-full w-full object-cover hover:brightness-90 transition-all"
+                    className="h-full w-full object-contain hover:brightness-90 transition-all"
                   />
                 </AnimatePresence>
                 
@@ -149,11 +174,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                    <button
                      key={idx}
                      onClick={() => setActiveImageIdx(idx)}
-                     className={`relative flex-shrink-0 w-20 aspect-[3/4] border-2 transition-all ${
+                     className={`relative flex-shrink-0 w-20 aspect-[9/16] border-2 transition-all ${
                        activeImageIdx === idx ? 'border-[#1c1c1c]' : 'border-transparent hover:border-gray-200'
                      }`}
                    >
-                     <img src={img} alt="" className="w-full h-full object-cover" />
+                     <img src={img} alt="" className="w-full h-full object-contain" />
                    </button>
                  ))}
                </div>

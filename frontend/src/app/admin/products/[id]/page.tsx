@@ -17,6 +17,9 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
   
   const { data: product, loading } = useAdminData(isNew ? '' : `/admin/products/${id}`);
   
+  const [enableColors, setEnableColors] = useState(false);
+  const [colorsInput, setColorsInput] = useState('');
+
   const [formData, setFormData] = useState<any>({
     name: '',
     description: '',
@@ -27,6 +30,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
     collectionType: 'lotus',
     countInStock: 0,
     sizes: { S: 0, M: 0, L: 0, XL: 0 },
+    variants: [],
     isFeatured: false,
     isVisible: true,
     isPublished: true,
@@ -48,15 +52,37 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
           })() 
         : '';
 
+      const productVariants = product.variants || [];
+      const hasActualColors = productVariants.some((v: any) => v.color && v.color !== 'Default');
+      const uniqueColors = [...new Set(productVariants.map((v: any) => v.color || 'Default'))].filter(c => c !== 'Default') as string[];
+      
+      setEnableColors(hasActualColors);
+      setColorsInput(hasActualColors ? uniqueColors.join(', ') : '');
+
       setFormData({
         ...formData, // Keep defaults for missing fields
         ...product,
+        variants: productVariants,
         sizes: product.sizes || formData.sizes,
         images: Array.isArray(product.images) ? product.images : (product.image ? [product.image] : []),
         releaseDate: formattedDate,
       });
     }
   }, [product, isNew]);
+
+  useEffect(() => {
+    if (isNew) {
+      const initialVariants = ['S', 'M', 'L', 'XL'].map(size => ({
+        color: 'Default',
+        size,
+        quantity: 0
+      }));
+      setFormData((prev: any) => ({
+        ...prev,
+        variants: initialVariants
+      }));
+    }
+  }, [isNew]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,10 +104,68 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
   };
 
   const updateSize = (size: string, qty: number) => {
+    const currentVariants = [...(formData.variants || [])];
+    const idx = currentVariants.findIndex((v: any) => v.color === 'Default' && v.size === size);
+    if (idx >= 0) {
+      currentVariants[idx].quantity = qty;
+    } else {
+      currentVariants.push({ color: 'Default', size, quantity: qty });
+    }
+
+    const newSizes = { ...formData.sizes, [size]: qty };
+    const totalStock = Object.values(newSizes).reduce((a: any, b: any) => a + b, 0);
+
     setFormData({
       ...formData,
-      sizes: { ...formData.sizes, [size]: qty },
-      countInStock: Object.values({ ...formData.sizes, [size]: qty }).reduce((a: any, b: any) => a + b, 0)
+      sizes: newSizes,
+      variants: currentVariants,
+      countInStock: totalStock
+    });
+  };
+
+  const updateVariantQty = (color: string, size: string, qty: number) => {
+    const currentVariants = [...(formData.variants || [])];
+    const idx = currentVariants.findIndex((v: any) => v.color === color && v.size === size);
+    if (idx >= 0) {
+      currentVariants[idx].quantity = qty;
+    } else {
+      currentVariants.push({ color, size, quantity: qty });
+    }
+    
+    const totalStock = currentVariants.reduce((sum: number, v: any) => sum + (Number(v.quantity) || 0), 0);
+    
+    setFormData({
+      ...formData,
+      variants: currentVariants,
+      countInStock: totalStock
+    });
+  };
+
+  const handleColorsInputChange = (val: string) => {
+    setColorsInput(val);
+    const newColors = val.split(',').map(c => c.trim()).filter(Boolean);
+    const activeColors = newColors.length > 0 ? newColors : ['Default'];
+    
+    const sizesList = ['S', 'M', 'L', 'XL'];
+    const newVariants: any[] = [];
+    
+    activeColors.forEach((color) => {
+      sizesList.forEach((size) => {
+        const existing = formData.variants?.find((v: any) => v.color === color && v.size === size);
+        newVariants.push({
+          color,
+          size,
+          quantity: existing ? existing.quantity : 0
+        });
+      });
+    });
+
+    const totalStock = newVariants.reduce((sum: number, v: any) => sum + (Number(v.quantity) || 0), 0);
+    
+    setFormData({
+      ...formData,
+      variants: newVariants,
+      countInStock: totalStock
     });
   };
 
@@ -99,7 +183,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div className="space-y-12 pb-24">
+    <div className="space-y-12 pb-24 text-white">
       <div className="flex items-center justify-between">
         <AdminHeader 
           title={isNew ? "New Creation" : "Edit Piece"} 
@@ -108,14 +192,14 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
         <div className="flex gap-4">
            <button 
             onClick={() => router.back()}
-            className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all"
+            className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:bg-white/5 transition-all animate-none cursor-pointer"
            >
              Discard
            </button>
            <button 
             onClick={handleSubmit}
             disabled={saving}
-            className="bg-primary text-black px-8 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-primary-hover transition-all"
+            className="bg-primary text-black px-8 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-primary-hover transition-all cursor-pointer"
            >
              {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
              {isNew ? 'Publish Piece' : 'Commit Changes'}
@@ -174,7 +258,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
                         category: type === 'lotus' ? 'Lotus Collections' : 'Lion Collections',
                       });
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white bg-[#111]"
                   >
                     <option value="lotus">Lotus Collection</option>
                     <option value="lion">Lion Collection</option>
@@ -186,7 +270,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white"
                   />
                 </div>
               </div>
@@ -205,22 +289,104 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
            </section>
 
            <section className="bg-[#111] border border-white/5 rounded-2xl p-8 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg"><Zap size={20} /></div>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-white">Size-Specific Inventory</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg"><Layers size={20} /></div>
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-white">Size & Color Inventory</h2>
+                </div>
+                
+                {/* Color Option Toggle */}
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <span className="text-[10px] font-bold uppercase text-gray-400">Enable Colors</span>
+                  <input 
+                    type="checkbox" 
+                    checked={enableColors} 
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setEnableColors(checked);
+                      if (checked) {
+                        handleColorsInputChange(colorsInput || 'Black, White');
+                      } else {
+                        const defaultVariants = ['S', 'M', 'L', 'XL'].map(size => {
+                          const existing = formData.variants?.find((v: any) => v.size === size);
+                          return {
+                            color: 'Default',
+                            size,
+                            quantity: existing ? existing.quantity : 0
+                          };
+                        });
+                        const totalStock = defaultVariants.reduce((sum: number, v: any) => sum + (Number(v.quantity) || 0), 0);
+                        setFormData({
+                          ...formData,
+                          variants: defaultVariants,
+                          countInStock: totalStock
+                        });
+                      }
+                    }}
+                    className="rounded bg-white/5 border-white/10 text-primary focus:ring-0 cursor-pointer"
+                  />
+                </label>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                 {['S', 'M', 'L', 'XL'].map((size) => (
-                   <div key={size} className="space-y-2 p-4 bg-white/5 rounded-xl border border-white/5">
-                      <label className="text-[10px] uppercase font-bold text-gray-500 block text-center">Size {size}</label>
-                      <input 
-                        type="number" 
-                        value={formData.sizes[size] || 0}
-                        onChange={(e) => updateSize(size, Number(e.target.value))}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-center text-xs font-bold focus:border-primary outline-none"
-                      />
-                   </div>
-                 ))}
+
+              {enableColors && (
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-gray-500">Colors (comma-separated)</label>
+                  <input 
+                    type="text" 
+                    value={colorsInput}
+                    onChange={(e) => handleColorsInputChange(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white"
+                    placeholder="e.g. Black, White, Gold"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-6">
+                {enableColors ? (
+                  (colorsInput.split(',').map(c => c.trim()).filter(Boolean).length > 0 
+                    ? colorsInput.split(',').map(c => c.trim()).filter(Boolean) 
+                    : ['Default']
+                  ).map((color) => (
+                    <div key={color} className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/5">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-primary">{color}</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {['S', 'M', 'L', 'XL'].map((size) => {
+                          const variant = formData.variants?.find((v: any) => v.color === color && v.size === size);
+                          const qty = variant ? variant.quantity : 0;
+                          return (
+                            <div key={size} className="space-y-1">
+                              <label className="text-[9px] uppercase font-bold text-gray-500 block text-center">Size {size}</label>
+                              <input 
+                                type="number" 
+                                value={qty}
+                                onChange={(e) => updateVariantQty(color, size, Number(e.target.value))}
+                                className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-center text-xs font-bold focus:border-primary outline-none text-white"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                     {['S', 'M', 'L', 'XL'].map((size) => {
+                       const variant = formData.variants?.find((v: any) => v.color === 'Default' && v.size === size);
+                       const qty = variant ? variant.quantity : 0;
+                       return (
+                         <div key={size} className="space-y-2 p-4 bg-white/5 rounded-xl border border-white/5">
+                            <label className="text-[10px] uppercase font-bold text-gray-500 block text-center">Size {size}</label>
+                            <input 
+                              type="number" 
+                              value={qty}
+                              onChange={(e) => updateSize(size, Number(e.target.value))}
+                              className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-center text-xs font-bold focus:border-primary outline-none text-white"
+                            />
+                         </div>
+                       );
+                     })}
+                  </div>
+                )}
               </div>
            </section>
         </div>
@@ -239,7 +405,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
                       type="number" 
                       value={formData.price}
                       onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white"
                       required
                     />
                  </div>
@@ -249,7 +415,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
                       type="number" 
                       value={formData.discountPrice}
                       onChange={(e) => setFormData({...formData, discountPrice: Number(e.target.value)})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-primary"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white text-white"
                     />
                  </div>
                  <div className="space-y-2">
@@ -319,7 +485,7 @@ export default function ProductFormPage({ params }: { params: Promise<{ id: stri
                   type="date" 
                   value={formData.releaseDate}
                   onChange={(e) => setFormData({...formData, releaseDate: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs focus:border-primary outline-none text-white"
                 />
                 <p className="text-[8px] text-gray-600 uppercase font-bold leading-relaxed mt-2">
                   System will automatically publish this piece at the specified date.

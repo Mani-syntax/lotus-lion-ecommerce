@@ -56,9 +56,9 @@ const Navbar = () => {
       )}
       <div className="border-b border-[#dddddd]">
         <div className="mx-auto max-w-[1440px] px-3 sm:px-8">
-          <div className="grid h-20 grid-cols-[44px_minmax(0,1fr)_86px] items-center md:h-20 md:grid-cols-3">
-            {/* Left Section: Menu */}
-            <div className="flex items-center">
+          <div className="flex h-20 items-center justify-between md:h-20">
+            {/* Left Section: Logo & Mobile Menu */}
+            <div className="flex flex-1 items-center gap-4 justify-start">
               <button
                 onClick={() => setIsOpen(true)}
                 className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] md:hidden"
@@ -67,27 +67,28 @@ const Navbar = () => {
                 <Menu size={31} strokeWidth={1.8} /> <span className="hidden">Menu</span>
               </button>
 
-              <nav className="hidden items-center gap-7 md:flex">
-                {navItems.slice(0, 2).map((item) => (
-                  <Link key={`primary-${item.label}`} href={item.href} className="text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:text-[#df0029]">
-                    {item.label === 'Heritage' && <Flower2 size={14} className="inline -mt-0.5 mr-2" />}
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-
-            {/* Center Section: Logo */}
-            <div className="flex justify-center">
-              <Link href="/" className="flex items-center gap-2 sm:gap-3 text-center">
+              <Link href="/" className="flex items-center gap-2 sm:gap-3">
                 <span className="lotus-symbol hidden md:inline-grid" aria-hidden="true"><Flower2 /></span>
                 <span className="brand-heading block whitespace-nowrap text-[22px] uppercase sm:text-2xl">Lotus & Lion</span>
                 <span className="lion-symbol hidden md:inline-grid" aria-hidden="true"><Crown /></span>
               </Link>
             </div>
 
+            {/* Center Section: Navigation Options (Desktop only) */}
+            <nav className="hidden items-center justify-center gap-4 md:flex lg:gap-8">
+              {navItems.map((item) => (
+                <Link 
+                  key={`primary-${item.label}`} 
+                  href={item.href} 
+                  className="text-[11px] lg:text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:text-[#df0029] whitespace-nowrap transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+
             {/* Right Section: Icons */}
-            <div className="flex items-center justify-end gap-3 sm:gap-5">
+            <div className="flex flex-1 items-center justify-end gap-3 sm:gap-5">
               <Link href="/products" aria-label="Search">
                 <Search size={28} strokeWidth={1.8} className="md:h-[19px] md:w-[19px]" />
               </Link>
@@ -124,16 +125,6 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="hidden border-b border-[#dddddd] md:block">
-        <nav className="mx-auto flex h-12 max-w-[1440px] items-center justify-center gap-10 px-8">
-          {navItems.map((item) => (
-            <Link key={`nav-${item.label}`} href={item.href} className="text-[12px] uppercase tracking-[0.18em] text-[#1c1c1c] hover:text-[#df0029]">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
       </div>
 
       {isOpen && (

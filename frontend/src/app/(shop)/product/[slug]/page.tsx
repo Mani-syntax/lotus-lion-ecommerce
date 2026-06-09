@@ -6,7 +6,9 @@ import { productsService } from '@/lib/services/productsService';
 import { useStore } from '@/store/useStore';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -30,6 +32,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const touchStartX = useRef<number | null>(null);
   const addToCart = useStore((state) => state.addToCart);
 
@@ -38,6 +42,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       try {
         const data = await productsService.getProductBySlug(slug);
         setProduct(data);
+        if (data && data.stock_quantity === 0) {
+          setQuantity(0);
+        }
+        // Fetch similar products
+        const allProducts = await productsService.getProducts();
+        const filtered = (allProducts || []).filter((p: any) => p.slug !== slug);
+        setSimilarProducts(filtered);
       } catch (error) {
         console.error('Error fetching product:', error);
       } finally {
@@ -115,6 +126,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               onTouchStart={handleImageTouchStart}
               onTouchEnd={handleImageTouchEnd}
             >
+              {product.images && product.images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setSelectedImage((prev) => (prev === 0 ? product.images.length - 1 : prev - 1))}
+                    className="absolute left-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white/80 hover:bg-white text-black shadow-sm transition-all focus:outline-none hover:scale-105 active:scale-95 cursor-pointer"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    onClick={() => setSelectedImage((prev) => (prev === product.images.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white/80 hover:bg-white text-black shadow-sm transition-all focus:outline-none hover:scale-105 active:scale-95 cursor-pointer"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </>
+              )}
               {product.images?.[selectedImage] ? (
                 <div className="relative h-[min(78vh,980px)] min-h-[620px] w-full max-w-[560px]">
                   <Image
@@ -168,21 +197,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               </p>
             </div>
 
-            <div className="flex items-center gap-4 mb-8">
-              <span className="text-5xl font-bold text-black">
+            <div className="flex items-center gap-4 mb-8 mt-4">
+              <span className="text-3xl font-bold text-black">
                 ₹{product.discount_price || product.price}
               </span>
               {product.discount_price && (
-                <span className="text-2xl text-gray-500 line-through">
+                <span className="text-lg text-gray-500 line-through">
                   ₹{product.price}
                 </span>
               )}
             </div>
-
-            <div 
-              className="text-gray-700 mb-10 prose prose-lg max-w-none"
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
 
             {/* Sizes */}
             {sizes.length > 0 && (
@@ -207,7 +231,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             )}
 
             {/* Colors */}
-            {colors.length > 0 && (
+            {colors.length > 0 && !(colors.length === 1 && colors[0] === 'Default') && (
               <div className="mb-8">
                 <label className="block text-base font-bold mb-3">Color</label>
                 <div className="flex gap-3 flex-wrap">
@@ -229,23 +253,25 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             )}
 
             {/* Quantity */}
-            <div className="mb-8">
-              <label className="block text-base font-bold mb-3">Quantity</label>
-              <div className="flex items-center gap-4">
+            <div className="mb-6">
+              <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Quantity</label>
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-5 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 text-xl font-bold"
+                  onClick={() => setQuantity(Math.max(product.stock_quantity > 0 ? 1 : 0, quantity - 1))}
+                  className="w-9 h-9 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center justify-center text-sm font-medium transition cursor-pointer"
+                  type="button"
                 >
                   −
                 </button>
-                <span className="text-2xl font-bold min-w-12 text-center">{quantity}</span>
+                <span className="text-sm font-bold min-w-8 text-center">{quantity}</span>
                 <button
                   onClick={() =>
                     setQuantity(
                       Math.min(product.stock_quantity, quantity + 1)
                     )
                   }
-                  className="px-5 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 text-xl font-bold"
+                  className="w-9 h-9 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center justify-center text-sm font-medium transition cursor-pointer"
+                  type="button"
                 >
                   +
                 </button>
@@ -253,11 +279,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
 
             {/* Stock */}
-            <div className="mb-10">
+            <div className="mb-6">
               {product.stock_quantity > 0 ? (
-                <p className="text-lg text-green-600 font-bold">✓ In Stock</p>
+                <p className="text-sm text-green-600 font-semibold">✓ In Stock</p>
               ) : (
-                <p className="text-lg text-red-600 font-bold">Out of Stock</p>
+                <p className="text-sm text-red-600 font-semibold">Out of Stock</p>
               )}
             </div>
 
@@ -265,10 +291,32 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <button
               onClick={handleAddToCart}
               disabled={product.stock_quantity === 0}
-              className="w-full bg-black text-white py-5 rounded-lg font-bold text-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white py-3 rounded-lg text-xs uppercase font-bold tracking-widest hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Add to Cart
             </button>
+
+            {/* Collapsible Description Accordion */}
+            <div className="border-t border-b border-gray-200 py-4 mt-8">
+              <button
+                onClick={() => setIsDescriptionOpen(!isDescriptionOpen)}
+                className="flex w-full items-center justify-between text-left focus:outline-none cursor-pointer"
+              >
+                <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#1c1c1c]">
+                  Description
+                </span>
+                <span className="text-xl font-light text-gray-500">
+                  {isDescriptionOpen ? '−' : '+'}
+                </span>
+              </button>
+              
+              {isDescriptionOpen && (
+                <div 
+                  className="mt-4 text-[13px] text-gray-600 leading-relaxed prose prose-sm max-w-none transition-all duration-300"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              )}
+            </div>
           </motion.div>
         </div>
 
@@ -285,6 +333,56 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               className="text-gray-700"
               dangerouslySetInnerHTML={{ __html: product.rich_description }}
             />
+          </motion.div>
+        )}
+
+        {/* Similar Products */}
+        {similarProducts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-16 border-t border-gray-200 pt-10 pb-16 px-4 md:px-8"
+          >
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1c1c1c] mb-8 text-center">
+              View Similar Products
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {similarProducts.map((item: any) => {
+                const imgUrl = item.images?.[0]?.image_url || '';
+                const displayPrice = item.discount_price || item.price;
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/product/${item.slug}`}
+                    className="group block"
+                  >
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-gray-50 mb-3">
+                      {imgUrl ? (
+                        <Image
+                          src={imgUrl}
+                          alt={item.name}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-gray-300 text-xs">No Image</div>
+                      )}
+                    </div>
+                    <h3 className="text-[12px] font-semibold text-black truncate group-hover:underline">
+                      {item.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[13px] font-bold text-black">₹{displayPrice}</span>
+                      {item.discount_price && item.discount_price < item.price && (
+                        <span className="text-[11px] text-gray-400 line-through">₹{item.price}</span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </motion.div>
         )}
       </div>

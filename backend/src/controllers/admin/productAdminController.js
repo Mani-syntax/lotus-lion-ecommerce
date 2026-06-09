@@ -154,7 +154,19 @@ const createProduct = async (req, res, next) => {
     }
 
     // Handle sizes/variants
-    if (sizes) {
+    if (req.body.variants && Array.isArray(req.body.variants)) {
+      const variantInserts = req.body.variants
+        .filter(v => Number(v.quantity) > 0)
+        .map(v => ({
+          product_id: product.id,
+          size: v.size,
+          quantity: Number(v.quantity),
+          color: v.color || 'Default'
+        }));
+      if (variantInserts.length > 0) {
+        await supabase.from('product_variants').insert(variantInserts);
+      }
+    } else if (sizes) {
       const variantInserts = Object.entries(sizes)
         .filter(([_, qty]) => Number(qty) > 0)
         .map(([size, qty]) => ({
@@ -232,7 +244,20 @@ const updateProduct = async (req, res, next) => {
     }
 
     // Sync sizes/variants
-    if (sizes) {
+    if (req.body.variants && Array.isArray(req.body.variants)) {
+      await supabase.from('product_variants').delete().eq('product_id', req.params.id);
+      const variantInserts = req.body.variants
+        .filter(v => Number(v.quantity) > 0)
+        .map(v => ({
+          product_id: req.params.id,
+          size: v.size,
+          quantity: Number(v.quantity),
+          color: v.color || 'Default'
+        }));
+      if (variantInserts.length > 0) {
+        await supabase.from('product_variants').insert(variantInserts);
+      }
+    } else if (sizes) {
       await supabase.from('product_variants').delete().eq('product_id', req.params.id);
       const variantInserts = Object.entries(sizes)
         .filter(([_, qty]) => Number(qty) > 0)

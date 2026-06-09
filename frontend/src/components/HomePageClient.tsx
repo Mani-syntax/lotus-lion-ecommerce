@@ -30,11 +30,7 @@ const fallbackCollections = [
   },
 ];
 
-const journals = [
-  'How Artist Wardrobes Balance Comfort And Drama',
-  'Drawing Lines Into Fabric: Our Studio Notes',
-  'Building A Two-Color Capsule That Still Feels Alive',
-];
+
 
 const collectionUrlByKey: Record<string, string> = {
   lotus: '/collections/lotus',
@@ -218,18 +214,7 @@ export default function HomePageClient({ initialData }: { initialData: HomeCms |
 
       <ProductRail title="Lion Collections" href="/collections/lion" products={lionRail.slice(0, 8)} />
 
-      <section className="mx-auto max-w-5xl px-4 py-12 text-center sm:px-8">
-        <h2 className="brand-heading text-3xl uppercase">Studio Journal</h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {journals.map((title, i) => (
-            <div key={i} className="text-left">
-               <ArtPanel index={i} label="Journal" />
-               <h3 className="mt-4 brand-heading text-lg uppercase">{title}</h3>
-               <Link href="/blog" className="mt-3 inline-block text-[10px] uppercase tracking-widest border-b border-black">Read More</Link>
-            </div>
-          ))}
-        </div>
-      </section>
+
       
       <section className="mx-auto grid max-w-[1440px] grid-cols-2 gap-px border-b border-[#dddddd] bg-[#dddddd] md:grid-cols-4">
         {[
